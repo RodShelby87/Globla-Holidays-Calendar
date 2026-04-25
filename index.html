@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Holiday Calendar - All Countries Mode</title>
+    <style>
+        :root {
+            --bg-main: #f0f2f5; --bg-card: #ffffff; --text-main: #333333;
+            --text-muted: #666666; --primary: #1a73e8; --border: #dadce0;
+            --bg-light: #f8f9fa; --holiday-bg: #e8f0fe; --holiday-text: #174ea6;
+            --empty-cell: #f8f9fa; --today-highlight: #fff9e6; --today-border: #f29900;
+        }
+        [data-theme="dark"] {
+            --bg-main: #18191a; --bg-card: #242526; --text-main: #e4e6eb;
+            --text-muted: #b0b3b8; --primary: #4da3ff; --border: #3a3b3c;
+            --bg-light: #3a3b3c; --holiday-bg: #2d3748; --holiday-text: #90cdf4;
+            --empty-cell: #1c1e21; --today-highlight: #332b1a; --today-border: #ffcc00;
+        }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; padding: 10px; background: var(--bg-main); color: var(--text-main); transition: 0.3s; font-size: 13px; }
+        .container { max-width: 1300px; margin: 0 auto; background: var(--bg-card); padding: 12px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        
+        .status-bar { background: var(--primary); color: white; padding: 8px 15px; border-radius: 6px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .status-info { display: flex; flex-direction: column; }
+        .status-label { font-size: 9px; text-transform: uppercase; opacity: 0.8; letter-spacing: 0.5px; }
+        .status-value { font-size: 14px; font-weight: bold; }
+
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
+        .controls { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; flex: 1; }
+        
+        select, button { padding: 5px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-card); color: var(--text-main); cursor: pointer; font-size: 12px; }
+        #todayBtn { background-color: var(--primary); color: white; border: none; font-weight: bold; }
+
+        .clock-display { display: flex; gap: 6px; }
+        .clock-item { text-align: center; background: var(--bg-light); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); min-width: 80px; }
+        .clock-time { font-size: 13px; font-weight: bold; color: var(--primary); font-family: monospace; }
+        .clock-label { font-size: 8px; text-transform: uppercase; color: var(--text-muted); margin-top: 1px; }
+
+        .calendar-header { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--border); border: 1px solid var(--border); border-bottom: none; border-radius: 6px 6px 0 0; }
+        .calendar-header > div { background: var(--bg-light); padding: 5px; text-align: center; font-weight: bold; font-size: 11px; color: var(--text-muted); }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 0 0 6px 6px; }
+        
+        .day-cell { background: var(--bg-card); min-height: 75px; height: 75px; padding: 4px; display: flex; flex-direction: column; position: relative; overflow-y: auto; }
+        .day-cell.empty { background: var(--empty-cell); }
+        .day-cell.today { background: var(--today-highlight) !important; outline: 2px solid var(--today-border); outline-offset: -2px; z-index: 2; }
+        .day-number { font-weight: bold; font-size: 13px; margin-bottom: 2px; flex-shrink: 0; }
+        
+        .holiday-list { display: flex; flex-direction: column; gap: 2px; }
+        .holiday-label { 
+            background: var(--holiday-bg); color: var(--holiday-text); padding: 2px 4px; border-radius: 3px; font-size: 8.5px; 
+            border-left: 2px solid var(--primary); line-height: 1.1; word-break: break-word;
+        }
+        .country-tag { font-weight: bold; color: var(--primary); font-size: 7.5px; margin-left: 3px; }
+        
+        .loading { text-align: center; padding: 20px; font-style: italic; font-size: 14px; color: var(--primary); display: none; width: 100%; }
+
+        @media (max-width: 800px) {
+            .header { flex-direction: column; align-items: stretch; }
+            .clock-display { justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="status-bar">
+        <div class="status-info">
+            <span class="status-label">Today's Status</span>
+            <span class="status-value" id="dailyStatus">---</span>
+        </div>
+        <div class="status-info" style="text-align: right;">
+            <span class="status-label">Date Context</span>
+            <span class="status-value" id="localDateDisplay">--/--/----</span>
+        </div>
+    </div>
+
+    <div class="header">
+        <div class="controls">
+            <button id="darkModeToggle">🌙</button>
+            <button id="todayBtn">Today</button>
+            <select id="regionSelect">
+                <option value="All">All Continents</option>
+                <option value="Africa">Africa</option>
+                <option value="Americas">Americas</option>
+                <option value="Asia">Asia</option>
+                <option value="Europe">Europe</option>
+                <option value="Oceania">Oceania</option>
+            </select>
+            <select id="countrySelect"></select>
+            <select id="yearSelect"></select>
+            <select id="monthSelect"></select>
+        </div>
+        <div class="clock-display" id="clockDisplay"></div>
+    </div>
+
+    <div id="loading" class="loading">📡 Gathering global data (this may take a moment)...</div>
+
+    <div id="calendarWrapper">
+        <div class="calendar-header">
+            <div>SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+    </div>
+</div>
+
+<script>
+    const countryData = [
+        // Full list preserved as requested
+        { code: 'AR', name: 'Argentina', region: 'Americas', zones: [{label: 'BA', tz: 'America/Argentina/Buenos_Aires'}] },
+        { code: 'BO', name: 'Bolivia', region: 'Americas', zones: [{label: 'LP', tz: 'America/La_Paz'}] },
+        { code: 'BR', name: 'Brazil', region: 'Americas', zones: [{label: 'BSB', tz: 'America/Sao_Paulo'}] },
+        { code: 'CA', name: 'Canada', region: 'Americas', zones: [{label: 'TOR', tz: 'America/Toronto'}] },
+        { code: 'CL', name: 'Chile', region: 'Americas', zones: [{label: 'SCL', tz: 'America/Santiago'}] },
+        { code: 'CO', name: 'Colombia', region: 'Americas', zones: [{label: 'BOG', tz: 'America/Bogota'}] },
+        { code: 'CR', name: 'Costa Rica', region: 'Americas', zones: [{label: 'SJO', tz: 'America/Costa_Rica'}] },
+        { code: 'CU', name: 'Cuba', region: 'Americas', zones: [{label: 'HAV', tz: 'America/Havana'}] },
+        { code: 'DO', name: 'Dominican Rep.', region: 'Americas', zones: [{label: 'SDQ', tz: 'America/Santo_Domingo'}] },
+        { code: 'EC', name: 'Ecuador', region: 'Americas', zones: [{label: 'UIO', tz: 'America/Guayaquil'}] },
+        { code: 'GT', name: 'Guatemala', region: 'Americas', zones: [{label: 'GUA', tz: 'America/Guatemala'}] },
+        { code: 'JM', name: 'Jamaica', region: 'Americas', zones: [{label: 'KIN', tz: 'America/Jamaica'}] },
+        { code: 'MX', name: 'Mexico', region: 'Americas', zones: [{label: 'MEX', tz: 'America/Mexico_City'}] },
+        { code: 'PA', name: 'Panama', region: 'Americas', zones: [{label: 'PTY', tz: 'America/Panama'}] },
+        { code: 'PY', name: 'Paraguay', region: 'Americas', zones: [{label: 'ASU', tz: 'America/Asuncion'}] },
+        { code: 'PE', name: 'Peru', region: 'Americas', zones: [{label: 'LIM', tz: 'America/Lima'}] },
+        { code: 'US', name: 'United States', region: 'Americas', zones: [{label: 'NYC', tz: 'America/New_York'}] },
+        { code: 'UY', name: 'Uruguay', region: 'Americas', zones: [{label: 'MVD', tz: 'America/Montevideo'}] },
+        { code: 'VE', name: 'Venezuela', region: 'Americas', zones: [{label: 'CCS', tz: 'America/Caracas'}] },
+        { code: 'AT', name: 'Austria', region: 'Europe', zones: [{label: 'VIE', tz: 'Europe/Vienna'}] },
+        { code: 'BE', name: 'Belgium', region: 'Europe', zones: [{label: 'BRU', tz: 'Europe/Brussels'}] },
+        { code: 'BG', name: 'Bulgaria', region: 'Europe', zones: [{label: 'SOF', tz: 'Europe/Sofia'}] },
+        { code: 'HR', name: 'Croatia', region: 'Europe', zones: [{label: 'ZAG', tz: 'Europe/Zagreb'}] },
+        { code: 'CZ', name: 'Czechia', region: 'Europe', zones: [{label: 'PRG', tz: 'Europe/Prague'}] },
+        { code: 'DK', name: 'Denmark', region: 'Europe', zones: [{label: 'CPH', tz: 'Europe/Copenhagen'}] },
+        { code: 'FI', name: 'Finland', region: 'Europe', zones: [{label: 'HEL', tz: 'Europe/Helsinki'}] },
+        { code: 'FR', name: 'France', region: 'Europe', zones: [{label: 'PAR', tz: 'Europe/Paris'}] },
+        { code: 'DE', name: 'Germany', region: 'Europe', zones: [{label: 'BER', tz: 'Europe/Berlin'}] },
+        { code: 'GR', name: 'Greece', region: 'Europe', zones: [{label: 'ATH', tz: 'Europe/Athens'}] },
+        { code: 'HU', name: 'Hungary', region: 'Europe', zones: [{label: 'BUD', tz: 'Europe/Budapest'}] },
+        { code: 'IE', name: 'Ireland', region: 'Europe', zones: [{label: 'DUB', tz: 'Europe/Dublin'}] },
+        { code: 'IT', name: 'Italy', region: 'Europe', zones: [{label: 'ROM', tz: 'Europe/Rome'}] },
+        { code: 'NL', name: 'Netherlands', region: 'Europe', zones: [{label: 'AMS', tz: 'Europe/Amsterdam'}] },
+        { code: 'NO', name: 'Norway', region: 'Europe', zones: [{label: 'OSL', tz: 'Europe/Oslo'}] },
+        { code: 'PL', name: 'Poland', region: 'Europe', zones: [{label: 'WAW', tz: 'Europe/Warsaw'}] },
+        { code: 'PT', name: 'Portugal', region: 'Europe', zones: [{label: 'LIS', tz: 'Europe/Lisbon'}] },
+        { code: 'RO', name: 'Romania', region: 'Europe', zones: [{label: 'BUH', tz: 'Europe/Bucharest'}] },
+        { code: 'RU', name: 'Russia', region: 'Europe', zones: [{label: 'MOW', tz: 'Europe/Moscow'}] },
+        { code: 'ES', name: 'Spain', region: 'Europe', zones: [{label: 'MAD', tz: 'Europe/Madrid'}] },
+        { code: 'SE', name: 'Sweden', region: 'Europe', zones: [{label: 'STO', tz: 'Europe/Stockholm'}] },
+        { code: 'CH', name: 'Switzerland', region: 'Europe', zones: [{label: 'ZRH', tz: 'Europe/Zurich'}] },
+        { code: 'GB', name: 'United Kingdom', region: 'Europe', zones: [{label: 'LON', tz: 'Europe/London'}] },
+        { code: 'CN', name: 'China', region: 'Asia', zones: [{label: 'PEK', tz: 'Asia/Shanghai'}] },
+        { code: 'HK', name: 'Hong Kong', region: 'Asia', zones: [{label: 'HKG', tz: 'Asia/Hong_Kong'}] },
+        { code: 'IN', name: 'India', region: 'Asia', zones: [{label: 'DEL', tz: 'Asia/Kolkata'}] },
+        { code: 'ID', name: 'Indonesia', region: 'Asia', zones: [{label: 'JKT', tz: 'Asia/Jakarta'}] },
+        { code: 'IL', name: 'Israel', region: 'Asia', zones: [{label: 'TLV', tz: 'Asia/Jerusalem'}] },
+        { code: 'JP', name: 'Japan', region: 'Asia', zones: [{label: 'TYO', tz: 'Asia/Tokyo'}] },
+        { code: 'SA', name: 'Saudi Arabia', region: 'Asia', zones: [{label: 'RUH', tz: 'Asia/Riyadh'}] },
+        { code: 'SG', name: 'Singapore', region: 'Asia', zones: [{label: 'SGP', tz: 'Asia/Singapore'}] },
+        { code: 'KR', name: 'South Korea', region: 'Asia', zones: [{label: 'SEL', tz: 'Asia/Seoul'}] },
+        { code: 'AE', name: 'UAE', region: 'Asia', zones: [{label: 'DXB', tz: 'Asia/Dubai'}] },
+        { code: 'DZ', name: 'Algeria', region: 'Africa', zones: [{label: 'ALG', tz: 'Africa/Algiers'}] },
+        { code: 'EG', name: 'Egypt', region: 'Africa', zones: [{label: 'CAI', tz: 'Africa/Cairo'}] },
+        { code: 'GH', name: 'Ghana', region: 'Africa', zones: [{label: 'ACC', tz: 'Africa/Accra'}] },
+        { code: 'KE', name: 'Kenya', region: 'Africa', zones: [{label: 'NBO', tz: 'Africa/Nairobi'}] },
+        { code: 'MA', name: 'Morocco', region: 'Africa', zones: [{label: 'CAS', tz: 'Africa/Casablanca'}] },
+        { code: 'NG', name: 'Nigeria', region: 'Africa', zones: [{label: 'LOS', tz: 'Africa/Lagos'}] },
+        { code: 'ZA', name: 'South Africa', region: 'Africa', zones: [{label: 'JNB', tz: 'Africa/Johannesburg'}] },
+        { code: 'AU', name: 'Australia', region: 'Oceania', zones: [{label: 'SYD', tz: 'Australia/Sydney'}] },
+        { code: 'NZ', name: 'New Zealand', region: 'Oceania', zones: [{label: 'AKL', tz: 'Pacific/Auckland'}] }
+    ].sort((a, b) => a.name.localeCompare(b.name));
+
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    let currentHolidays = {}; // Will store: { 'YYYY-MM-DD': { 'Holiday Name': ['CC1', 'CC2'] } }
+    let clockInterval;
+
+    const regionSelect = document.getElementById('regionSelect');
+    const countrySelect = document.getElementById('countrySelect');
+    const yearSelect = document.getElementById('yearSelect');
+    const monthSelect = document.getElementById('monthSelect');
+    const calendarGrid = document.getElementById('calendarGrid');
+    const clockDisplay = document.getElementById('clockDisplay');
+    const dailyStatus = document.getElementById('dailyStatus');
+    const localDateDisplay = document.getElementById('localDateDisplay');
+
+    function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : '');
+        localStorage.setItem('user-theme', theme);
+    }
+
+    document.getElementById('darkModeToggle').onclick = () => {
+        applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    };
+
+    function init() {
+        applyTheme(localStorage.getItem('user-theme') || 'light');
+        const currentYear = new Date().getFullYear();
+        for (let i = currentYear - 1; i <= currentYear + 4; i++) {
+            const opt = document.createElement('option'); opt.value = i; opt.textContent = i; yearSelect.appendChild(opt);
+        }
+        months.forEach((m, i) => {
+            const opt = document.createElement('option'); opt.value = i; opt.textContent = m; monthSelect.appendChild(opt);
+        });
+
+        regionSelect.value = 'Americas';
+        updateCountryList();
+        countrySelect.value = 'AR';
+        
+        const now = new Date();
+        yearSelect.value = now.getFullYear();
+        monthSelect.value = now.getMonth();
+
+        fetchHolidays();
+        startClocks();
+    }
+
+    function updateCountryList() {
+        const region = regionSelect.value;
+        const currentVal = countrySelect.value;
+        countrySelect.innerHTML = '<option value="ALL">-- All Countries --</option>';
+        const filtered = region === 'All' ? countryData : countryData.filter(c => c.region === region);
+        filtered.forEach(c => {
+            const opt = document.createElement('option'); opt.value = c.code; opt.textContent = c.name; countrySelect.appendChild(opt);
+        });
+        if ([...countrySelect.options].some(o => o.value === currentVal)) countrySelect.value = currentVal;
+    }
+
+    async function fetchHolidays() {
+        document.getElementById('loading').style.display = 'block';
+        currentHolidays = {};
+        const year = yearSelect.value;
+        const isAll = countrySelect.value === 'ALL';
+        
+        const region = regionSelect.value;
+        const targets = isAll 
+            ? (region === 'All' ? countryData : countryData.filter(c => c.region === region))
+            : [countryData.find(c => c.code === countrySelect.value)];
+
+        try {
+            await Promise.all(targets.map(async (country) => {
+                try {
+                    const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/${country.code}`);
+                    const data = await res.json();
+                    data.forEach(h => {
+                        if (!currentHolidays[h.date]) currentHolidays[h.date] = {};
+                        if (!currentHolidays[h.date][h.name]) currentHolidays[h.date][h.name] = [];
+                        currentHolidays[h.date][h.name].push(country.code);
+                    });
+                } catch(e) {}
+            }));
+            renderCalendar();
+        } catch (e) { renderCalendar(); }
+        document.getElementById('loading').style.display = 'none';
+    }
+
+    function renderCalendar() {
+        calendarGrid.innerHTML = '';
+        const y = parseInt(yearSelect.value), m = parseInt(monthSelect.value);
+        const first = new Date(y, m, 1).getDay(), total = new Date(y, m + 1, 0).getDate();
+
+        const isAllMode = countrySelect.value === 'ALL';
+        let currY, currM, currD, displayDate;
+
+        if (isAllMode) {
+            const now = new Date();
+            currY = now.getFullYear(); currM = now.getMonth() + 1; currD = now.getDate();
+            displayDate = now.toLocaleDateString("en-GB", {day:'2-digit', month:'short', year:'numeric'}) + " (Local Time)";
+            clockDisplay.style.display = 'none';
+        } else {
+            const country = countryData.find(c => c.code === countrySelect.value);
+            const tz = country.zones[0].tz;
+            const countryDateStr = new Date().toLocaleDateString("en-CA", {timeZone: tz});
+            [currY, currM, currD] = countryDateStr.split('-').map(Number);
+            displayDate = new Date().toLocaleDateString("en-GB", {timeZone: tz, day:'2-digit', month:'short', year:'numeric'});
+            clockDisplay.style.display = 'flex';
+            startClocks();
+        }
+
+        localDateDisplay.textContent = displayDate;
+        const todayKey = `${currY}-${String(currM).padStart(2, '0')}-${String(currD).padStart(2, '0')}`;
+        
+        // Build Status text
+        if (currentHolidays[todayKey]) {
+            const names = Object.keys(currentHolidays[todayKey]);
+            dailyStatus.textContent = names.join(" | ");
+        } else {
+            dailyStatus.textContent = "Nothing";
+        }
+
+        for (let i = 0; i < first; i++) calendarGrid.appendChild(Object.assign(document.createElement('div'), {className: 'day-cell empty'}));
+        
+        for (let d = 1; d <= total; d++) {
+            const cell = document.createElement('div'); 
+            cell.className = 'day-cell';
+            if (y === currY && (m + 1) === currM && d === currD) cell.classList.add('today');
+
+            const dateKey = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            let html = `<div class="day-number">${d}</div><div class="holiday-list">`;
+            
+            if (currentHolidays[dateKey]) {
+                for (const [name, codes] of Object.entries(currentHolidays[dateKey])) {
+                    const codeStr = isAllMode ? `<span class="country-tag">(${codes.join(',')})</span>` : '';
+                    html += `<div class="holiday-label">${name}${codeStr}</div>`;
+                }
+            }
+            html += `</div>`;
+            cell.innerHTML = html;
+            calendarGrid.appendChild(cell);
+        }
+    }
+
+    function startClocks() {
+        if (clockInterval) clearInterval(clockInterval);
+        if (countrySelect.value === 'ALL') return;
+
+        const country = countryData.find(c => c.code === countrySelect.value);
+        const update = () => {
+            clockDisplay.innerHTML = country.zones.map(z => `
+                <div class="clock-item">
+                    <div class="clock-time">${new Date().toLocaleTimeString("en-GB", {timeZone: z.tz, hour:'2-digit', minute:'2-digit', second:'2-digit'})}</div>
+                    <div class="clock-label">${z.label}</div>
+                </div>
+            `).join('');
+        };
+        update(); clockInterval = setInterval(update, 1000);
+    }
+
+    document.getElementById('todayBtn').onclick = () => {
+        let currY, currM;
+        if (countrySelect.value === 'ALL') {
+            const now = new Date();
+            currY = now.getFullYear(); currM = now.getMonth();
+        } else {
+            const country = countryData.find(c => c.code === countrySelect.value);
+            const countryDateStr = new Date().toLocaleDateString("en-CA", {timeZone: country.zones[0].tz});
+            const parts = countryDateStr.split('-').map(Number);
+            currY = parts[0]; currM = parts[1] - 1;
+        }
+        yearSelect.value = currY;
+        monthSelect.value = currM;
+        fetchHolidays();
+    };
+
+    regionSelect.onchange = () => { updateCountryList(); fetchHolidays(); };
+    countrySelect.onchange = fetchHolidays;
+    yearSelect.onchange = fetchHolidays;
+    monthSelect.onchange = renderCalendar;
+
+    init();
+</script>
+</body>
+</html>
