@@ -36,6 +36,12 @@
         .clock-time { font-size: 13px; font-weight: bold; color: var(--primary); font-family: monospace; }
         .clock-label { font-size: 8px; text-transform: uppercase; color: var(--text-muted); margin-top: 1px; }
 
+        /* ── Month navigation arrows ── */
+        .month-nav { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px; }
+        .month-nav .nav-arrow { background: var(--bg-light); border: 1px solid var(--border); color: var(--text-main); font-size: 18px; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s, color 0.2s; line-height: 1; padding: 0; }
+        .month-nav .nav-arrow:hover { background: var(--primary); color: white; }
+        .month-nav .nav-title { font-size: 16px; font-weight: 700; min-width: 180px; text-align: center; color: var(--text-main); }
+
         .calendar-header { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--border); border: 1px solid var(--border); border-bottom: none; border-radius: 6px 6px 0 0; }
         .calendar-header > div { background: var(--bg-light); padding: 5px; text-align: center; font-weight: bold; font-size: 11px; color: var(--text-muted); }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 0 0 6px 6px; }
@@ -43,6 +49,7 @@
         .day-cell { background: var(--bg-card); min-height: 75px; height: 75px; padding: 4px; display: flex; flex-direction: column; position: relative; overflow-y: auto; }
         .day-cell.empty { background: var(--empty-cell); }
         .day-cell.today { background: var(--today-highlight) !important; outline: 2px solid var(--today-border); outline-offset: -2px; z-index: 2; }
+        .day-cell.selected-day { outline: 2px solid var(--primary); outline-offset: -2px; z-index: 2; }
         .day-number { font-weight: bold; font-size: 13px; margin-bottom: 2px; flex-shrink: 0; }
         
         .holiday-list { display: flex; flex-direction: column; gap: 2px; }
@@ -54,9 +61,44 @@
         
         .loading { text-align: center; padding: 20px; font-style: italic; font-size: 14px; color: var(--primary); display: none; width: 100%; }
 
+        /* ── Date-picker trigger button ── */
+        .datepicker-trigger { position: relative; display: inline-block; }
+        .datepicker-trigger button { background: var(--bg-light); border: 1px solid var(--border); color: var(--text-main); cursor: pointer; font-size: 12px; padding: 5px 8px; border-radius: 4px; }
+        .datepicker-trigger button:hover { background: var(--primary); color: white; }
+
+        /* ── Floating date-picker panel ── */
+        .datepicker-panel {
+            position: absolute; top: 110%; left: 0; z-index: 100;
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.18); padding: 10px; width: 260px;
+            display: none; user-select: none;
+        }
+        .datepicker-panel.open { display: block; }
+
+        .dp-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .dp-header button { background: var(--bg-light); border: 1px solid var(--border); color: var(--text-main); width: 28px; height: 28px; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+        .dp-header button:hover { background: var(--primary); color: white; }
+        .dp-title { font-weight: 700; font-size: 13px; cursor: pointer; padding: 2px 6px; border-radius: 4px; color: var(--text-main); }
+        .dp-title:hover { background: var(--bg-light); }
+
+        .dp-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 2px; }
+        .dp-days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 2px; }
+        .dp-day { padding: 5px 0; border-radius: 4px; cursor: pointer; font-size: 12px; color: var(--text-main); }
+        .dp-day:hover { background: var(--primary); color: white; }
+        .dp-day.empty { cursor: default; }
+        .dp-day.empty:hover { background: transparent; }
+        .dp-day.dp-today { font-weight: bold; outline: 2px solid var(--today-border); outline-offset: -2px; }
+        .dp-day.dp-selected { background: var(--primary); color: white; }
+
+        .dp-months, .dp-years { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+        .dp-month-cell, .dp-year-cell { padding: 8px 4px; text-align: center; border-radius: 4px; cursor: pointer; font-size: 12px; color: var(--text-main); }
+        .dp-month-cell:hover, .dp-year-cell:hover { background: var(--primary); color: white; }
+        .dp-month-cell.dp-current, .dp-year-cell.dp-current { font-weight: bold; outline: 2px solid var(--today-border); outline-offset: -2px; }
+
         @media (max-width: 800px) {
             .header { flex-direction: column; align-items: stretch; }
             .clock-display { justify-content: center; }
+            .datepicker-panel { left: auto; right: 0; }
         }
     </style>
 </head>
@@ -89,8 +131,20 @@
             <select id="countrySelect"></select>
             <select id="yearSelect"></select>
             <select id="monthSelect"></select>
+            <!-- Date picker trigger -->
+            <div class="datepicker-trigger" id="datepickerTrigger">
+                <button id="datepickerBtn" title="Jump to a specific date">📅 Go to date</button>
+                <div class="datepicker-panel" id="datepickerPanel"></div>
+            </div>
         </div>
         <div class="clock-display" id="clockDisplay"></div>
+    </div>
+
+    <!-- Month navigation arrows -->
+    <div class="month-nav">
+        <button class="nav-arrow" id="prevMonth" title="Previous month">&#8249;</button>
+        <span class="nav-title" id="navTitle"></span>
+        <button class="nav-arrow" id="nextMonth" title="Next month">&#8250;</button>
     </div>
 
     <div id="loading" class="loading">📡 Gathering global data (this may take a moment)...</div>
@@ -105,7 +159,6 @@
 
 <script>
     const countryData = [
-        // Full list preserved as requested
         { code: 'AR', name: 'Argentina', region: 'Americas', zones: [{label: 'BA', tz: 'America/Argentina/Buenos_Aires'}] },
         { code: 'BO', name: 'Bolivia', region: 'Americas', zones: [{label: 'LP', tz: 'America/La_Paz'}] },
         { code: 'BR', name: 'Brazil', region: 'Americas', zones: [{label: 'BSB', tz: 'America/Sao_Paulo'}] },
@@ -170,8 +223,10 @@
     ].sort((a, b) => a.name.localeCompare(b.name));
 
     const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    let currentHolidays = {}; // Will store: { 'YYYY-MM-DD': { 'Holiday Name': ['CC1', 'CC2'] } }
+    const monthsShort = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    let currentHolidays = {};
     let clockInterval;
+    let selectedDate = null;
 
     const regionSelect = document.getElementById('regionSelect');
     const countrySelect = document.getElementById('countrySelect');
@@ -181,6 +236,24 @@
     const clockDisplay = document.getElementById('clockDisplay');
     const dailyStatus = document.getElementById('dailyStatus');
     const localDateDisplay = document.getElementById('localDateDisplay');
+    const navTitle = document.getElementById('navTitle');
+
+    // ─── Persist / Restore selections ───
+    const STORAGE_KEY = 'cal-selections';
+
+    function saveSelections() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            region:  regionSelect.value,
+            country: countrySelect.value,
+            year:    yearSelect.value,
+            month:   monthSelect.value
+        }));
+    }
+
+    function getSavedSelections() {
+        try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || null; }
+        catch { return null; }
+    }
 
     function applyTheme(theme) {
         document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : '');
@@ -191,6 +264,163 @@
         applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
     };
 
+    // ─── Month navigation arrows ───
+    document.getElementById('prevMonth').onclick = () => {
+        let m = parseInt(monthSelect.value);
+        let y = parseInt(yearSelect.value);
+        m--;
+        if (m < 0) { m = 11; y--; }
+        if (setYearIfExists(y)) { monthSelect.value = m; onMonthYearChange(); }
+    };
+    document.getElementById('nextMonth').onclick = () => {
+        let m = parseInt(monthSelect.value);
+        let y = parseInt(yearSelect.value);
+        m++;
+        if (m > 11) { m = 0; y++; }
+        if (setYearIfExists(y)) { monthSelect.value = m; onMonthYearChange(); }
+    };
+
+    function setYearIfExists(y) {
+        const opt = [...yearSelect.options].find(o => parseInt(o.value) === y);
+        if (opt) { yearSelect.value = y; return true; }
+        return false;
+    }
+
+    function updateNavTitle() {
+        const m = parseInt(monthSelect.value);
+        const y = parseInt(yearSelect.value);
+        navTitle.textContent = `${months[m]} ${y}`;
+    }
+
+    function onMonthYearChange() {
+        const prevYear = yearSelect.dataset.prevYear;
+        const currYear = yearSelect.value;
+        yearSelect.dataset.prevYear = currYear;
+        saveSelections();
+        if (prevYear !== currYear) {
+            fetchHolidays();
+        } else {
+            renderCalendar();
+        }
+        updateNavTitle();
+    }
+
+    // ─── Date Picker ───
+    const dpPanel = document.getElementById('datepickerPanel');
+    const dpBtn   = document.getElementById('datepickerBtn');
+    let dpState = { year: new Date().getFullYear(), month: new Date().getMonth(), view: 'days' };
+
+    dpBtn.onclick = (e) => { e.stopPropagation(); dpState.year = parseInt(yearSelect.value); dpState.month = parseInt(monthSelect.value); dpState.view = 'days'; renderDatePicker(); dpPanel.classList.toggle('open'); };
+
+    document.addEventListener('click', (e) => {
+        if (!document.getElementById('datepickerTrigger').contains(e.target)) dpPanel.classList.remove('open');
+    });
+
+    function renderDatePicker() {
+        if (dpState.view === 'days') renderDPDays();
+        else if (dpState.view === 'months') renderDPMonths();
+        else renderDPYears();
+    }
+
+    function renderDPDays() {
+        const y = dpState.year, m = dpState.month;
+        const now = new Date();
+        const todayY = now.getFullYear(), todayM = now.getMonth(), todayD = now.getDate();
+        const firstDay = new Date(y, m, 1).getDay();
+        const totalDays = new Date(y, m + 1, 0).getDate();
+
+        let html = `<div class="dp-header">
+            <button id="dpPrev">&#8249;</button>
+            <span class="dp-title" id="dpTitle">${months[m]} ${y}</span>
+            <button id="dpNext">&#8250;</button>
+        </div>`;
+        html += `<div class="dp-weekdays"><div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div></div>`;
+        html += `<div class="dp-days">`;
+        for (let i = 0; i < firstDay; i++) html += `<div class="dp-day empty"></div>`;
+        for (let d = 1; d <= totalDays; d++) {
+            let cls = 'dp-day';
+            if (y === todayY && m === todayM && d === todayD) cls += ' dp-today';
+            if (selectedDate && y === selectedDate.year && m === selectedDate.month && d === selectedDate.day) cls += ' dp-selected';
+            html += `<div class="${cls}" data-day="${d}">${d}</div>`;
+        }
+        html += `</div>`;
+        dpPanel.innerHTML = html;
+
+        document.getElementById('dpPrev').onclick = (e) => { e.stopPropagation(); dpState.month--; if (dpState.month < 0) { dpState.month = 11; dpState.year--; } renderDatePicker(); };
+        document.getElementById('dpNext').onclick = (e) => { e.stopPropagation(); dpState.month++; if (dpState.month > 11) { dpState.month = 0; dpState.year++; } renderDatePicker(); };
+        document.getElementById('dpTitle').onclick = (e) => { e.stopPropagation(); dpState.view = 'months'; renderDatePicker(); };
+
+        dpPanel.querySelectorAll('.dp-day:not(.empty)').forEach(el => {
+            el.onclick = (e) => {
+                e.stopPropagation();
+                const day = parseInt(el.dataset.day);
+                selectedDate = { year: dpState.year, month: dpState.month, day };
+                if (setYearIfExists(dpState.year)) {
+                    monthSelect.value = dpState.month;
+                    onMonthYearChange();
+                }
+                dpPanel.classList.remove('open');
+                setTimeout(() => {
+                    const cells = calendarGrid.querySelectorAll('.day-cell:not(.empty)');
+                    const target = cells[day - 1];
+                    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+            };
+        });
+    }
+
+    function renderDPMonths() {
+        let html = `<div class="dp-header">
+            <button id="dpPrev">&#8249;</button>
+            <span class="dp-title" id="dpTitle">${dpState.year}</span>
+            <button id="dpNext">&#8250;</button>
+        </div>`;
+        const now = new Date();
+        html += `<div class="dp-months">`;
+        for (let i = 0; i < 12; i++) {
+            let cls = 'dp-month-cell';
+            if (dpState.year === now.getFullYear() && i === now.getMonth()) cls += ' dp-current';
+            html += `<div class="${cls}" data-month="${i}">${monthsShort[i]}</div>`;
+        }
+        html += `</div>`;
+        dpPanel.innerHTML = html;
+
+        document.getElementById('dpPrev').onclick = (e) => { e.stopPropagation(); dpState.year--; renderDatePicker(); };
+        document.getElementById('dpNext').onclick = (e) => { e.stopPropagation(); dpState.year++; renderDatePicker(); };
+        document.getElementById('dpTitle').onclick = (e) => { e.stopPropagation(); dpState.view = 'years'; renderDatePicker(); };
+
+        dpPanel.querySelectorAll('.dp-month-cell').forEach(el => {
+            el.onclick = (e) => { e.stopPropagation(); dpState.month = parseInt(el.dataset.month); dpState.view = 'days'; renderDatePicker(); };
+        });
+    }
+
+    function renderDPYears() {
+        const decadeStart = Math.floor(dpState.year / 10) * 10 - 1;
+        let html = `<div class="dp-header">
+            <button id="dpPrev">&#8249;</button>
+            <span class="dp-title" id="dpTitle">${decadeStart + 1} – ${decadeStart + 10}</span>
+            <button id="dpNext">&#8250;</button>
+        </div>`;
+        const now = new Date();
+        html += `<div class="dp-years">`;
+        for (let i = 0; i < 12; i++) {
+            const yr = decadeStart + i;
+            let cls = 'dp-year-cell';
+            if (yr === now.getFullYear()) cls += ' dp-current';
+            html += `<div class="${cls}" data-year="${yr}">${yr}</div>`;
+        }
+        html += `</div>`;
+        dpPanel.innerHTML = html;
+
+        document.getElementById('dpPrev').onclick = (e) => { e.stopPropagation(); dpState.year -= 10; renderDatePicker(); };
+        document.getElementById('dpNext').onclick = (e) => { e.stopPropagation(); dpState.year += 10; renderDatePicker(); };
+
+        dpPanel.querySelectorAll('.dp-year-cell').forEach(el => {
+            el.onclick = (e) => { e.stopPropagation(); dpState.year = parseInt(el.dataset.year); dpState.view = 'months'; renderDatePicker(); };
+        });
+    }
+
+    // ─── Init ───
     function init() {
         applyTheme(localStorage.getItem('user-theme') || 'light');
         const currentYear = new Date().getFullYear();
@@ -201,16 +431,52 @@
             const opt = document.createElement('option'); opt.value = i; opt.textContent = m; monthSelect.appendChild(opt);
         });
 
-        regionSelect.value = 'Americas';
-        updateCountryList();
-        countrySelect.value = 'AR';
-        
+        // ── Restore saved selections or fall back to defaults ──
+        const saved = getSavedSelections();
         const now = new Date();
-        yearSelect.value = now.getFullYear();
-        monthSelect.value = now.getMonth();
+
+        if (saved) {
+            // 1) Region
+            if ([...regionSelect.options].some(o => o.value === saved.region)) {
+                regionSelect.value = saved.region;
+            } else {
+                regionSelect.value = 'Americas';
+            }
+            updateCountryList();
+
+            // 2) Country
+            if ([...countrySelect.options].some(o => o.value === saved.country)) {
+                countrySelect.value = saved.country;
+            }
+
+            // 3) Year (only if it exists in the dropdown)
+            if ([...yearSelect.options].some(o => o.value === saved.year)) {
+                yearSelect.value = saved.year;
+            } else {
+                yearSelect.value = now.getFullYear();
+            }
+
+            // 4) Month
+            if (saved.month !== undefined && saved.month !== null && parseInt(saved.month) >= 0 && parseInt(saved.month) <= 11) {
+                monthSelect.value = saved.month;
+            } else {
+                monthSelect.value = now.getMonth();
+            }
+        } else {
+            // First-time defaults
+            regionSelect.value = 'Americas';
+            updateCountryList();
+            countrySelect.value = 'AR';
+            yearSelect.value = now.getFullYear();
+            monthSelect.value = now.getMonth();
+        }
+
+        yearSelect.dataset.prevYear = yearSelect.value;
 
         fetchHolidays();
         startClocks();
+        updateNavTitle();
+        saveSelections();
     }
 
     function updateCountryList() {
@@ -250,6 +516,7 @@
             renderCalendar();
         } catch (e) { renderCalendar(); }
         document.getElementById('loading').style.display = 'none';
+        updateNavTitle();
     }
 
     function renderCalendar() {
@@ -278,7 +545,6 @@
         localDateDisplay.textContent = displayDate;
         const todayKey = `${currY}-${String(currM).padStart(2, '0')}-${String(currD).padStart(2, '0')}`;
         
-        // Build Status text
         if (currentHolidays[todayKey]) {
             const names = Object.keys(currentHolidays[todayKey]);
             dailyStatus.textContent = names.join(" | ");
@@ -286,12 +552,15 @@
             dailyStatus.textContent = "Nothing";
         }
 
+        updateNavTitle();
+
         for (let i = 0; i < first; i++) calendarGrid.appendChild(Object.assign(document.createElement('div'), {className: 'day-cell empty'}));
         
         for (let d = 1; d <= total; d++) {
             const cell = document.createElement('div'); 
             cell.className = 'day-cell';
             if (y === currY && (m + 1) === currM && d === currD) cell.classList.add('today');
+            if (selectedDate && y === selectedDate.year && m === selectedDate.month && d === selectedDate.day) cell.classList.add('selected-day');
 
             const dateKey = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             let html = `<div class="day-number">${d}</div><div class="holiday-list">`;
@@ -325,6 +594,7 @@
     }
 
     document.getElementById('todayBtn').onclick = () => {
+        selectedDate = null;
         let currY, currM;
         if (countrySelect.value === 'ALL') {
             const now = new Date();
@@ -337,13 +607,15 @@
         }
         yearSelect.value = currY;
         monthSelect.value = currM;
+        yearSelect.dataset.prevYear = currY;
+        saveSelections();
         fetchHolidays();
     };
 
-    regionSelect.onchange = () => { updateCountryList(); fetchHolidays(); };
-    countrySelect.onchange = fetchHolidays;
-    yearSelect.onchange = fetchHolidays;
-    monthSelect.onchange = renderCalendar;
+    regionSelect.onchange = () => { updateCountryList(); saveSelections(); fetchHolidays(); };
+    countrySelect.onchange = () => { saveSelections(); fetchHolidays(); };
+    yearSelect.onchange = () => { yearSelect.dataset.prevYear = yearSelect.value; saveSelections(); fetchHolidays(); };
+    monthSelect.onchange = () => { saveSelections(); renderCalendar(); updateNavTitle(); };
 
     init();
 </script>
