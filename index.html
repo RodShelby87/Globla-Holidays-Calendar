@@ -528,13 +528,15 @@
 }
 
     function applyHolidays(holidays, countryCode) {
-        holidays.forEach(h => {
-            const dateKey = h.date.slice(0, 10);
-            if (!currentHolidays[dateKey]) currentHolidays[dateKey] = {};
-            if (!currentHolidays[dateKey][h.name]) currentHolidays[dateKey][h.name] = [];
+    holidays.forEach(h => {
+        const dateKey = h.date.slice(0, 10);
+        if (!currentHolidays[dateKey]) currentHolidays[dateKey] = {};
+        if (!currentHolidays[dateKey][h.name]) currentHolidays[dateKey][h.name] = [];
+        if (!currentHolidays[dateKey][h.name].includes(countryCode)) {
             currentHolidays[dateKey][h.name].push(countryCode);
-        });
-    }
+        }
+    });
+}
 
     try {
         await Promise.all(targets.map(async (country) => {
