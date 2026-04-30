@@ -511,16 +511,21 @@
     }
 
     async function fetchFromCalendarific(country) {
-        const res = await fetch(`https://calendarific.com/api/v2/holidays?api_key=${CALENDARIFIC_KEY}&country=${country.code}&year=${year}&type=national`);
-        if (!res.ok) return null;
-        const data = await res.json();
-        const holidays = data?.response?.holidays;
-        if (!Array.isArray(holidays) || holidays.length === 0) return null;
-        return holidays.map(h => ({
+    const res = await fetch(`https://calendarific.com/api/v2/holidays?api_key=${CALENDARIFIC_KEY}&country=${country.code}&year=${year}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const holidays = data?.response?.holidays;
+    if (!Array.isArray(holidays) || holidays.length === 0) return null;
+    
+    const nonWorkableTypes = ['national', 'public', 'bank', 'school', 'optional', 'observance'];
+    
+    return holidays
+        .filter(h => h.type && h.type.some(t => nonWorkableTypes.includes(t.toLowerCase())))
+        .map(h => ({
             date: h.date.iso.slice(0, 10),
             name: h.name
         }));
-    }
+}
 
     function applyHolidays(holidays, countryCode) {
         holidays.forEach(h => {
