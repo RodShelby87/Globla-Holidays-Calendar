@@ -491,33 +491,69 @@
     }
 
     async function fetchHolidays() {
-        document.getElementById('loading').style.display = 'block';
-        currentHolidays = {};
-        const year = yearSelect.value;
-        const isAll = countrySelect.value === 'ALL';
-        
-        const region = regionSelect.value;
-        const targets = isAll 
-            ? (region === 'All' ? countryData : countryData.filter(c => c.region === region))
-            : [countryData.find(c => c.code === countrySelect.value)];
+    document.getElementById('loading').style.display = 'block';
+    currentHolidays = {};
+    const year = yearSelect.value;
+    const isAll = countrySelect.value === 'ALL';
+    
+    const region = regionSelect.value;
+    const targets = isAll 
+        ? (region === 'All' ? countryData : countryData.filter(c => c.region === region))
+        : [countryData.find(c => c.code === countrySelect.value)];
 
-        try {
-            await Promise.all(targets.map(async (country) => {
-                try {
-                    const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/${country.code}`);
-                    const data = await res.json();
-                    data.forEach(h => {
-                        if (!currentHolidays[h.date]) currentHolidays[h.date] = {};
-                        if (!currentHolidays[h.date][h.name]) currentHolidays[h.date][h.name] = [];
-                        currentHolidays[h.date][h.name].push(country.code);
-                    });
-                } catch(e) {}
-            }));
-            renderCalendar();
-        } catch (e) { renderCalendar(); }
-        document.getElementById('loading').style.display = 'none';
-        updateNavTitle();
+    const CALENDARIFIC_KEY = '3R7QE1Rdf42oOEski9IfJ5mt0sfdSMaM';
+
+    async function fetchFromNager(country) {
+        const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/${country.code}`);
+        if (!res.ok) return null;
+        const data = await res.json();
+        return Array.isArray(data) && data.length > 0 ? data : null;
     }
+
+    async function fetchFromCalendarific(country) {
+        const res = await fetch(`https://calendarific.com/api/v2/holidays?api_key=${CALENDARIFIC_KEY}&country=${country.code}&year=${year}&type=national`);
+        if (!res.ok) return null;
+        const data = await res.json();
+        const holidays = data?.response?.holidays;
+        if (!Array.isArray(holidays) || holidays.length === 0) return null;
+        return holidays.map(h => ({
+            date: h.date.iso.slice(0, 10),
+            name: h.name
+        }));
+    }
+
+    function applyHolidays(holidays, countryCode) {
+        holidays.forEach(h => {
+            const dateKey = h.date.slice(0, 10);
+            if (!currentHolidays[dateKey]) currentHolidays[dateKey] = {};
+            if (!currentHolidays[dateKey][h.name]) currentHolidays[dateKey][h.name] = [];
+            currentHolidays[dateKey][h.name].push(countryCode);
+        });
+    }
+
+    try {
+        await Promise.all(targets.map(async (country) => {
+            try {
+                const nager = await fetchFromNager(country);
+                if (nager) {
+                    applyHolidays(nager, country.code);
+                } else {
+                    const cal = await fetchFromCalendarific(country);
+                    if (cal) applyHolidays(cal, country.code);
+                }
+            } catch(e) {
+                try {
+                    const cal = await fetchFromCalendarific(country);
+                    if (cal) applyHolidays(cal, country.code);
+                } catch(e2) {}
+            }
+        }));
+        renderCalendar();
+    } catch (e) { renderCalendar(); }
+
+    document.getElementById('loading').style.display = 'none';
+    updateNavTitle();
+}
 
     function renderCalendar() {
         calendarGrid.innerHTML = '';
