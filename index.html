@@ -10,12 +10,14 @@
             --text-muted: #666666; --primary: #1a73e8; --border: #dadce0;
             --bg-light: #f8f9fa; --holiday-bg: #e8f0fe; --holiday-text: #174ea6;
             --empty-cell: #f8f9fa; --today-highlight: #fff9e6; --today-border: #f29900;
+            --popup-bg: #ffffff; --popup-border: #dadce0; --popup-shadow: rgba(0,0,0,0.18);
         }
         [data-theme="dark"] {
             --bg-main: #18191a; --bg-card: #242526; --text-main: #e4e6eb;
             --text-muted: #b0b3b8; --primary: #4da3ff; --border: #3a3b3c;
             --bg-light: #3a3b3c; --holiday-bg: #2d3748; --holiday-text: #90cdf4;
             --empty-cell: #1c1e21; --today-highlight: #332b1a; --today-border: #ffcc00;
+            --popup-bg: #2d2f31; --popup-border: #444648; --popup-shadow: rgba(0,0,0,0.45);
         }
         body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; padding: 10px; background: var(--bg-main); color: var(--text-main); transition: 0.3s; font-size: 13px; }
         .container { max-width: 1300px; margin: 0 auto; background: var(--bg-card); padding: 12px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
@@ -36,7 +38,6 @@
         .clock-time { font-size: 13px; font-weight: bold; color: var(--primary); font-family: monospace; }
         .clock-label { font-size: 8px; text-transform: uppercase; color: var(--text-muted); margin-top: 1px; }
 
-        /* ── Month navigation arrows ── */
         .month-nav { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px; }
         .month-nav .nav-arrow { background: var(--bg-light); border: 1px solid var(--border); color: var(--text-main); font-size: 18px; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s, color 0.2s; line-height: 1; padding: 0; }
         .month-nav .nav-arrow:hover { background: var(--primary); color: white; }
@@ -56,17 +57,112 @@
         .holiday-label { 
             background: var(--holiday-bg); color: var(--holiday-text); padding: 2px 4px; border-radius: 3px; font-size: 8.5px; 
             border-left: 2px solid var(--primary); line-height: 1.1; word-break: break-word;
+            cursor: pointer; transition: filter 0.15s, transform 0.1s;
+            user-select: none;
         }
+        .holiday-label:hover { filter: brightness(0.93); transform: scale(1.02); }
+        .holiday-label.active { outline: 1.5px solid var(--primary); outline-offset: 1px; }
         .country-tag { font-weight: bold; color: var(--primary); font-size: 7.5px; margin-left: 3px; }
         
         .loading { text-align: center; padding: 20px; font-style: italic; font-size: 14px; color: var(--primary); display: none; width: 100%; }
 
-        /* ── Date-picker trigger button ── */
+        /* ── Holiday Info Popup ── */
+        #holidayPopup {
+            position: fixed;
+            z-index: 9999;
+            width: 280px;
+            background: var(--popup-bg);
+            border: 1px solid var(--popup-border);
+            border-radius: 10px;
+            box-shadow: 0 8px 28px var(--popup-shadow);
+            padding: 14px 16px 12px;
+            display: none;
+            pointer-events: auto;
+        }
+        #holidayPopup.visible { display: block; }
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .popup-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.3;
+            flex: 1;
+        }
+        .popup-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 17px;
+            line-height: 1;
+            padding: 0 2px;
+            flex-shrink: 0;
+            margin-top: -2px;
+        }
+        .popup-close:hover { color: var(--text-main); }
+        .popup-meta {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            margin-bottom: 9px;
+        }
+        .popup-tag {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            padding: 2px 7px;
+            border-radius: 10px;
+            border: 1px solid;
+        }
+        .popup-tag.country { background: #e8f0fe; color: #174ea6; border-color: #aac4f6; }
+        .popup-tag.date { background: #f1f3f4; color: #5f6368; border-color: #dadce0; }
+        [data-theme="dark"] .popup-tag.country { background: #2d3748; color: #90cdf4; border-color: #4a6fa5; }
+        [data-theme="dark"] .popup-tag.date { background: #3a3b3c; color: #b0b3b8; border-color: #555; }
+        .popup-body {
+            font-size: 12px;
+            color: var(--text-main);
+            line-height: 1.55;
+            min-height: 44px;
+        }
+        .popup-loading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            font-size: 12px;
+            font-style: italic;
+        }
+        .popup-spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            flex-shrink: 0;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .popup-error { color: #c0392b; font-size: 12px; font-style: italic; }
+        [data-theme="dark"] .popup-error { color: #f1948a; }
+        .popup-footer {
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border);
+            font-size: 9.5px;
+            color: var(--text-muted);
+        }
+
+        /* ── Date-picker ── */
         .datepicker-trigger { position: relative; display: inline-block; }
         .datepicker-trigger button { background: var(--bg-light); border: 1px solid var(--border); color: var(--text-main); cursor: pointer; font-size: 12px; padding: 5px 8px; border-radius: 4px; }
         .datepicker-trigger button:hover { background: var(--primary); color: white; }
-
-        /* ── Floating date-picker panel ── */
         .datepicker-panel {
             position: absolute; top: 110%; left: 0; z-index: 100;
             background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
@@ -74,13 +170,11 @@
             display: none; user-select: none;
         }
         .datepicker-panel.open { display: block; }
-
         .dp-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
         .dp-header button { background: var(--bg-light); border: 1px solid var(--border); color: var(--text-main); width: 28px; height: 28px; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
         .dp-header button:hover { background: var(--primary); color: white; }
         .dp-title { font-weight: 700; font-size: 13px; cursor: pointer; padding: 2px 6px; border-radius: 4px; color: var(--text-main); }
         .dp-title:hover { background: var(--bg-light); }
-
         .dp-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 2px; }
         .dp-days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 2px; }
         .dp-day { padding: 5px 0; border-radius: 4px; cursor: pointer; font-size: 12px; color: var(--text-main); }
@@ -89,7 +183,6 @@
         .dp-day.empty:hover { background: transparent; }
         .dp-day.dp-today { font-weight: bold; outline: 2px solid var(--today-border); outline-offset: -2px; }
         .dp-day.dp-selected { background: var(--primary); color: white; }
-
         .dp-months, .dp-years { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
         .dp-month-cell, .dp-year-cell { padding: 8px 4px; text-align: center; border-radius: 4px; cursor: pointer; font-size: 12px; color: var(--text-main); }
         .dp-month-cell:hover, .dp-year-cell:hover { background: var(--primary); color: white; }
@@ -99,10 +192,27 @@
             .header { flex-direction: column; align-items: stretch; }
             .clock-display { justify-content: center; }
             .datepicker-panel { left: auto; right: 0; }
+            #holidayPopup { width: 240px; }
         }
     </style>
 </head>
 <body>
+
+<!-- Holiday Info Popup -->
+<div id="holidayPopup" role="tooltip" aria-live="polite">
+    <div class="popup-header">
+        <div class="popup-title" id="popupTitle"></div>
+        <button class="popup-close" id="popupClose" aria-label="Close">&#x2715;</button>
+    </div>
+    <div class="popup-meta" id="popupMeta"></div>
+    <div class="popup-body" id="popupBody">
+        <div class="popup-loading" id="popupLoading">
+            <div class="popup-spinner"></div>
+            <span>Looking up holiday info…</span>
+        </div>
+    </div>
+    <div class="popup-footer" id="popupFooter"></div>
+</div>
 
 <div class="container">
     <div class="status-bar">
@@ -131,7 +241,6 @@
             <select id="countrySelect"></select>
             <select id="yearSelect"></select>
             <select id="monthSelect"></select>
-            <!-- Date picker trigger -->
             <div class="datepicker-trigger" id="datepickerTrigger">
                 <button id="datepickerBtn" title="Jump to a specific date">📅 Go to date</button>
                 <div class="datepicker-panel" id="datepickerPanel"></div>
@@ -140,7 +249,6 @@
         <div class="clock-display" id="clockDisplay"></div>
     </div>
 
-    <!-- Month navigation arrows -->
     <div class="month-nav">
         <button class="nav-arrow" id="prevMonth" title="Previous month">&#8249;</button>
         <span class="nav-title" id="navTitle"></span>
@@ -222,7 +330,7 @@
         { code: 'NZ', name: 'New Zealand', region: 'Oceania', zones: [{label: 'AKL', tz: 'Pacific/Auckland'}] }
     ].sort((a, b) => a.name.localeCompare(b.name));
 
-    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
     const monthsShort = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     let currentHolidays = {};
     let clockInterval;
@@ -238,145 +346,285 @@
     const localDateDisplay = document.getElementById('localDateDisplay');
     const navTitle = document.getElementById('navTitle');
 
+    // ─── Holiday Info Popup ───
+    const popup = document.getElementById('holidayPopup');
+    const popupTitle = document.getElementById('popupTitle');
+    const popupMeta = document.getElementById('popupMeta');
+    const popupBody = document.getElementById('popupBody');
+    const popupLoading = document.getElementById('popupLoading');
+    const popupFooter = document.getElementById('popupFooter');
+
+    let activeLabel = null;
+    let descriptionCache = {};
+    let currentFetchController = null;
+
+    document.getElementById('popupClose').onclick = closePopup;
+
+    document.addEventListener('click', (e) => {
+        if (!popup.contains(e.target) && !e.target.classList.contains('holiday-label')) {
+            closePopup();
+        }
+        if (!document.getElementById('datepickerTrigger').contains(e.target)) {
+            document.getElementById('datepickerPanel').classList.remove('open');
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closePopup();
+    });
+
+    function closePopup() {
+        popup.classList.remove('visible');
+        if (activeLabel) {
+            activeLabel.classList.remove('active');
+            activeLabel = null;
+        }
+        if (currentFetchController) {
+            currentFetchController.abort();
+            currentFetchController = null;
+        }
+    }
+
+    function positionPopup(triggerEl) {
+        const rect = triggerEl.getBoundingClientRect();
+        const popupW = 280;
+        const margin = 8;
+        let left = rect.left + window.scrollX;
+        let top = rect.bottom + window.scrollY + 6;
+
+        if (left + popupW > window.innerWidth - margin) {
+            left = window.innerWidth - popupW - margin;
+        }
+        if (left < margin) left = margin;
+
+        const estimatedH = 160;
+        if (top + estimatedH > window.scrollY + window.innerHeight - margin) {
+            top = rect.top + window.scrollY - estimatedH - 6;
+        }
+
+        popup.style.left = left + 'px';
+        popup.style.top = top + 'px';
+    }
+
+    async function showHolidayPopup(labelEl, holidayName, countryCodes, dateKey) {
+        if (activeLabel === labelEl && popup.classList.contains('visible')) {
+            closePopup();
+            return;
+        }
+        if (activeLabel) activeLabel.classList.remove('active');
+        activeLabel = labelEl;
+        labelEl.classList.add('active');
+
+        popupTitle.textContent = holidayName;
+
+        const countryNames = countryCodes.map(code => {
+            const c = countryData.find(x => x.code === code);
+            return c ? c.name : code;
+        });
+
+        popupMeta.innerHTML = '';
+        const dateTag = document.createElement('span');
+        dateTag.className = 'popup-tag date';
+        dateTag.textContent = formatDateKey(dateKey);
+        popupMeta.appendChild(dateTag);
+        countryNames.forEach(n => {
+            const t = document.createElement('span');
+            t.className = 'popup-tag country';
+            t.textContent = n;
+            popupMeta.appendChild(t);
+        });
+
+        popupBody.innerHTML = '';
+        popupFooter.textContent = '';
+        const loader = document.createElement('div');
+        loader.className = 'popup-loading';
+        loader.innerHTML = '<div class="popup-spinner"></div><span>Looking up holiday info…</span>';
+        popupBody.appendChild(loader);
+
+        popup.classList.add('visible');
+        positionPopup(labelEl);
+
+        const cacheKey = `${holidayName}||${countryCodes.sort().join(',')}`;
+        if (descriptionCache[cacheKey]) {
+            renderPopupContent(descriptionCache[cacheKey]);
+            return;
+        }
+
+        if (currentFetchController) currentFetchController.abort();
+        currentFetchController = new AbortController();
+
+        try {
+            const countryContext = countryNames.length === 1
+                ? `in ${countryNames[0]}`
+                : `in: ${countryNames.join(', ')}`;
+
+            const prompt = `You are a concise holiday reference assistant. For the holiday "${holidayName}" observed ${countryContext}, provide a brief info card with these fields in JSON format only (no markdown, no extra text):
+{
+  "description": "2-3 sentence plain text description of what the holiday celebrates or commemorates",
+  "workability": "one of: Full public holiday (non-workable) | Partial / bank holiday | Optional / regional | Observance only (workable)",
+  "scope": "National | Regional | Religious | Cultural",
+  "note": "one short sentence about any important nuance (optional restrictions, regional differences, variable dates, etc.) — keep it under 20 words, or empty string if nothing notable"
+}`;
+
+            const response = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: 'claude-sonnet-4-20250514',
+                    max_tokens: 1000,
+                    messages: [{ role: 'user', content: prompt }]
+                }),
+                signal: currentFetchController.signal
+            });
+
+            if (!response.ok) throw new Error('API error');
+            const data = await response.json();
+            const raw = data.content.map(b => b.text || '').join('').trim();
+            let parsed;
+            try {
+                const cleaned = raw.replace(/```json|```/g, '').trim();
+                parsed = JSON.parse(cleaned);
+            } catch {
+                parsed = { description: raw, workability: '', scope: '', note: '' };
+            }
+
+            descriptionCache[cacheKey] = parsed;
+            renderPopupContent(parsed);
+
+        } catch (err) {
+            if (err.name === 'AbortError') return;
+            popupBody.innerHTML = '<span class="popup-error">Could not load holiday info. Please try again.</span>';
+        }
+    }
+
+    function renderPopupContent(data) {
+        popupBody.innerHTML = '';
+
+        if (data.workability || data.scope) {
+            const badges = document.createElement('div');
+            badges.style.cssText = 'display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;';
+            if (data.workability) {
+                const wb = document.createElement('span');
+                wb.style.cssText = getWorkabilityStyle(data.workability);
+                wb.textContent = data.workability;
+                badges.appendChild(wb);
+            }
+            if (data.scope) {
+                const sc = document.createElement('span');
+                sc.style.cssText = 'font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;background:#f1f3f4;color:#5f6368;border:1px solid #dadce0;';
+                sc.textContent = data.scope;
+                badges.appendChild(sc);
+            }
+            popupBody.appendChild(badges);
+        }
+
+        const desc = document.createElement('p');
+        desc.style.cssText = 'margin:0 0 6px;font-size:12px;line-height:1.55;color:var(--text-main);';
+        desc.textContent = data.description || '';
+        popupBody.appendChild(desc);
+
+        if (data.note) {
+            popupFooter.textContent = '📌 ' + data.note;
+        }
+    }
+
+    function getWorkabilityStyle(w) {
+        const base = 'font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;border:1px solid;';
+        if (w.includes('Full')) return base + 'background:#e6f4ea;color:#137333;border-color:#a8d5b5;';
+        if (w.includes('Partial') || w.includes('bank')) return base + 'background:#fef7e0;color:#a06a00;border-color:#f5d47a;';
+        if (w.includes('Optional') || w.includes('Regional') || w.includes('regional')) return base + 'background:#fff3e0;color:#b35f00;border-color:#ffcc80;';
+        return base + 'background:#f1f3f4;color:#5f6368;border-color:#dadce0;';
+    }
+
+    function formatDateKey(dk) {
+        const [y, m, d] = dk.split('-').map(Number);
+        return `${monthsShort[m - 1]} ${d}, ${y}`;
+    }
+
     // ─── Persist / Restore selections ───
     const STORAGE_KEY = 'cal-selections';
-
     function saveSelections() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
-            region:  regionSelect.value,
-            country: countrySelect.value,
-            year:    yearSelect.value,
-            month:   monthSelect.value
-        }));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ region: regionSelect.value, country: countrySelect.value, year: yearSelect.value, month: monthSelect.value }));
     }
-
     function getSavedSelections() {
-        try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || null; }
-        catch { return null; }
+        try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || null; } catch { return null; }
     }
-
     function applyTheme(theme) {
         document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : '');
         localStorage.setItem('user-theme', theme);
     }
-
     document.getElementById('darkModeToggle').onclick = () => {
         applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
     };
 
-    // ─── Month navigation arrows ───
+    // ─── Month navigation ───
     document.getElementById('prevMonth').onclick = () => {
-        let m = parseInt(monthSelect.value);
-        let y = parseInt(yearSelect.value);
-        m--;
-        if (m < 0) { m = 11; y--; }
+        let m = parseInt(monthSelect.value), y = parseInt(yearSelect.value);
+        m--; if (m < 0) { m = 11; y--; }
         if (setYearIfExists(y)) { monthSelect.value = m; onMonthYearChange(); }
     };
     document.getElementById('nextMonth').onclick = () => {
-        let m = parseInt(monthSelect.value);
-        let y = parseInt(yearSelect.value);
-        m++;
-        if (m > 11) { m = 0; y++; }
+        let m = parseInt(monthSelect.value), y = parseInt(yearSelect.value);
+        m++; if (m > 11) { m = 0; y++; }
         if (setYearIfExists(y)) { monthSelect.value = m; onMonthYearChange(); }
     };
-
     function setYearIfExists(y) {
         const opt = [...yearSelect.options].find(o => parseInt(o.value) === y);
-        if (opt) { yearSelect.value = y; return true; }
-        return false;
+        if (opt) { yearSelect.value = y; return true; } return false;
     }
-
     function updateNavTitle() {
-        const m = parseInt(monthSelect.value);
-        const y = parseInt(yearSelect.value);
-        navTitle.textContent = `${months[m]} ${y}`;
+        navTitle.textContent = `${months[parseInt(monthSelect.value)]} ${yearSelect.value}`;
     }
-
     function onMonthYearChange() {
-        const prevYear = yearSelect.dataset.prevYear;
-        const currYear = yearSelect.value;
+        const prevYear = yearSelect.dataset.prevYear, currYear = yearSelect.value;
         yearSelect.dataset.prevYear = currYear;
         saveSelections();
-        if (prevYear !== currYear) {
-            fetchHolidays();
-        } else {
-            renderCalendar();
-        }
+        if (prevYear !== currYear) fetchHolidays(); else renderCalendar();
         updateNavTitle();
     }
 
     // ─── Date Picker ───
     const dpPanel = document.getElementById('datepickerPanel');
-    const dpBtn   = document.getElementById('datepickerBtn');
+    const dpBtn = document.getElementById('datepickerBtn');
     let dpState = { year: new Date().getFullYear(), month: new Date().getMonth(), view: 'days' };
-
     dpBtn.onclick = (e) => { e.stopPropagation(); dpState.year = parseInt(yearSelect.value); dpState.month = parseInt(monthSelect.value); dpState.view = 'days'; renderDatePicker(); dpPanel.classList.toggle('open'); };
-
-    document.addEventListener('click', (e) => {
-        if (!document.getElementById('datepickerTrigger').contains(e.target)) dpPanel.classList.remove('open');
-    });
-
     function renderDatePicker() {
         if (dpState.view === 'days') renderDPDays();
         else if (dpState.view === 'months') renderDPMonths();
         else renderDPYears();
     }
-
     function renderDPDays() {
         const y = dpState.year, m = dpState.month;
-        const now = new Date();
-        const todayY = now.getFullYear(), todayM = now.getMonth(), todayD = now.getDate();
-        const firstDay = new Date(y, m, 1).getDay();
-        const totalDays = new Date(y, m + 1, 0).getDate();
-
-        let html = `<div class="dp-header">
-            <button id="dpPrev">&#8249;</button>
-            <span class="dp-title" id="dpTitle">${months[m]} ${y}</span>
-            <button id="dpNext">&#8250;</button>
-        </div>`;
-        html += `<div class="dp-weekdays"><div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div></div>`;
-        html += `<div class="dp-days">`;
+        const now = new Date(), tY = now.getFullYear(), tM = now.getMonth(), tD = now.getDate();
+        const firstDay = new Date(y, m, 1).getDay(), totalDays = new Date(y, m + 1, 0).getDate();
+        let html = `<div class="dp-header"><button id="dpPrev">&#8249;</button><span class="dp-title" id="dpTitle">${months[m]} ${y}</span><button id="dpNext">&#8250;</button></div>`;
+        html += `<div class="dp-weekdays"><div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div></div><div class="dp-days">`;
         for (let i = 0; i < firstDay; i++) html += `<div class="dp-day empty"></div>`;
         for (let d = 1; d <= totalDays; d++) {
             let cls = 'dp-day';
-            if (y === todayY && m === todayM && d === todayD) cls += ' dp-today';
+            if (y === tY && m === tM && d === tD) cls += ' dp-today';
             if (selectedDate && y === selectedDate.year && m === selectedDate.month && d === selectedDate.day) cls += ' dp-selected';
             html += `<div class="${cls}" data-day="${d}">${d}</div>`;
         }
         html += `</div>`;
         dpPanel.innerHTML = html;
-
         document.getElementById('dpPrev').onclick = (e) => { e.stopPropagation(); dpState.month--; if (dpState.month < 0) { dpState.month = 11; dpState.year--; } renderDatePicker(); };
         document.getElementById('dpNext').onclick = (e) => { e.stopPropagation(); dpState.month++; if (dpState.month > 11) { dpState.month = 0; dpState.year++; } renderDatePicker(); };
         document.getElementById('dpTitle').onclick = (e) => { e.stopPropagation(); dpState.view = 'months'; renderDatePicker(); };
-
         dpPanel.querySelectorAll('.dp-day:not(.empty)').forEach(el => {
             el.onclick = (e) => {
                 e.stopPropagation();
                 const day = parseInt(el.dataset.day);
                 selectedDate = { year: dpState.year, month: dpState.month, day };
-                if (setYearIfExists(dpState.year)) {
-                    monthSelect.value = dpState.month;
-                    onMonthYearChange();
-                }
+                if (setYearIfExists(dpState.year)) { monthSelect.value = dpState.month; onMonthYearChange(); }
                 dpPanel.classList.remove('open');
-                setTimeout(() => {
-                    const cells = calendarGrid.querySelectorAll('.day-cell:not(.empty)');
-                    const target = cells[day - 1];
-                    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 100);
+                setTimeout(() => { const cells = calendarGrid.querySelectorAll('.day-cell:not(.empty)'); const target = cells[day - 1]; if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100);
             };
         });
     }
-
     function renderDPMonths() {
-        let html = `<div class="dp-header">
-            <button id="dpPrev">&#8249;</button>
-            <span class="dp-title" id="dpTitle">${dpState.year}</span>
-            <button id="dpNext">&#8250;</button>
-        </div>`;
         const now = new Date();
-        html += `<div class="dp-months">`;
+        let html = `<div class="dp-header"><button id="dpPrev">&#8249;</button><span class="dp-title" id="dpTitle">${dpState.year}</span><button id="dpNext">&#8250;</button></div><div class="dp-months">`;
         for (let i = 0; i < 12; i++) {
             let cls = 'dp-month-cell';
             if (dpState.year === now.getFullYear() && i === now.getMonth()) cls += ' dp-current';
@@ -384,25 +632,14 @@
         }
         html += `</div>`;
         dpPanel.innerHTML = html;
-
         document.getElementById('dpPrev').onclick = (e) => { e.stopPropagation(); dpState.year--; renderDatePicker(); };
         document.getElementById('dpNext').onclick = (e) => { e.stopPropagation(); dpState.year++; renderDatePicker(); };
         document.getElementById('dpTitle').onclick = (e) => { e.stopPropagation(); dpState.view = 'years'; renderDatePicker(); };
-
-        dpPanel.querySelectorAll('.dp-month-cell').forEach(el => {
-            el.onclick = (e) => { e.stopPropagation(); dpState.month = parseInt(el.dataset.month); dpState.view = 'days'; renderDatePicker(); };
-        });
+        dpPanel.querySelectorAll('.dp-month-cell').forEach(el => { el.onclick = (e) => { e.stopPropagation(); dpState.month = parseInt(el.dataset.month); dpState.view = 'days'; renderDatePicker(); }; });
     }
-
     function renderDPYears() {
-        const decadeStart = Math.floor(dpState.year / 10) * 10 - 1;
-        let html = `<div class="dp-header">
-            <button id="dpPrev">&#8249;</button>
-            <span class="dp-title" id="dpTitle">${decadeStart + 1} – ${decadeStart + 10}</span>
-            <button id="dpNext">&#8250;</button>
-        </div>`;
-        const now = new Date();
-        html += `<div class="dp-years">`;
+        const decadeStart = Math.floor(dpState.year / 10) * 10 - 1, now = new Date();
+        let html = `<div class="dp-header"><button id="dpPrev">&#8249;</button><span class="dp-title" id="dpTitle">${decadeStart + 1} – ${decadeStart + 10}</span><button id="dpNext">&#8250;</button></div><div class="dp-years">`;
         for (let i = 0; i < 12; i++) {
             const yr = decadeStart + i;
             let cls = 'dp-year-cell';
@@ -411,13 +648,9 @@
         }
         html += `</div>`;
         dpPanel.innerHTML = html;
-
         document.getElementById('dpPrev').onclick = (e) => { e.stopPropagation(); dpState.year -= 10; renderDatePicker(); };
         document.getElementById('dpNext').onclick = (e) => { e.stopPropagation(); dpState.year += 10; renderDatePicker(); };
-
-        dpPanel.querySelectorAll('.dp-year-cell').forEach(el => {
-            el.onclick = (e) => { e.stopPropagation(); dpState.year = parseInt(el.dataset.year); dpState.view = 'months'; renderDatePicker(); };
-        });
+        dpPanel.querySelectorAll('.dp-year-cell').forEach(el => { el.onclick = (e) => { e.stopPropagation(); dpState.year = parseInt(el.dataset.year); dpState.view = 'months'; renderDatePicker(); }; });
     }
 
     // ─── Init ───
@@ -430,149 +663,87 @@
         months.forEach((m, i) => {
             const opt = document.createElement('option'); opt.value = i; opt.textContent = m; monthSelect.appendChild(opt);
         });
-
-        // ── Restore saved selections or fall back to defaults ──
-        const saved = getSavedSelections();
-        const now = new Date();
-
+        const saved = getSavedSelections(), now = new Date();
         if (saved) {
-            // 1) Region
-            if ([...regionSelect.options].some(o => o.value === saved.region)) {
-                regionSelect.value = saved.region;
-            } else {
-                regionSelect.value = 'Americas';
-            }
+            if ([...regionSelect.options].some(o => o.value === saved.region)) regionSelect.value = saved.region; else regionSelect.value = 'Americas';
             updateCountryList();
-
-            // 2) Country
-            if ([...countrySelect.options].some(o => o.value === saved.country)) {
-                countrySelect.value = saved.country;
-            }
-
-            // 3) Year (only if it exists in the dropdown)
-            if ([...yearSelect.options].some(o => o.value === saved.year)) {
-                yearSelect.value = saved.year;
-            } else {
-                yearSelect.value = now.getFullYear();
-            }
-
-            // 4) Month
-            if (saved.month !== undefined && saved.month !== null && parseInt(saved.month) >= 0 && parseInt(saved.month) <= 11) {
-                monthSelect.value = saved.month;
-            } else {
-                monthSelect.value = now.getMonth();
-            }
+            if ([...countrySelect.options].some(o => o.value === saved.country)) countrySelect.value = saved.country;
+            if ([...yearSelect.options].some(o => o.value === saved.year)) yearSelect.value = saved.year; else yearSelect.value = now.getFullYear();
+            if (saved.month !== undefined && parseInt(saved.month) >= 0 && parseInt(saved.month) <= 11) monthSelect.value = saved.month; else monthSelect.value = now.getMonth();
         } else {
-            // First-time defaults
-            regionSelect.value = 'Americas';
-            updateCountryList();
-            countrySelect.value = 'AR';
-            yearSelect.value = now.getFullYear();
-            monthSelect.value = now.getMonth();
+            regionSelect.value = 'Americas'; updateCountryList(); countrySelect.value = 'AR';
+            yearSelect.value = now.getFullYear(); monthSelect.value = now.getMonth();
         }
-
         yearSelect.dataset.prevYear = yearSelect.value;
-
-        fetchHolidays();
-        startClocks();
-        updateNavTitle();
-        saveSelections();
+        fetchHolidays(); startClocks(); updateNavTitle(); saveSelections();
     }
 
     function updateCountryList() {
-        const region = regionSelect.value;
-        const currentVal = countrySelect.value;
+        const region = regionSelect.value, currentVal = countrySelect.value;
         countrySelect.innerHTML = '<option value="ALL">-- All Countries --</option>';
         const filtered = region === 'All' ? countryData : countryData.filter(c => c.region === region);
-        filtered.forEach(c => {
-            const opt = document.createElement('option'); opt.value = c.code; opt.textContent = c.name; countrySelect.appendChild(opt);
-        });
+        filtered.forEach(c => { const opt = document.createElement('option'); opt.value = c.code; opt.textContent = c.name; countrySelect.appendChild(opt); });
         if ([...countrySelect.options].some(o => o.value === currentVal)) countrySelect.value = currentVal;
     }
 
     async function fetchHolidays() {
-    document.getElementById('loading').style.display = 'block';
-    currentHolidays = {};
-    const year = yearSelect.value;
-    const isAll = countrySelect.value === 'ALL';
-    
-    const region = regionSelect.value;
-    const targets = isAll 
-        ? (region === 'All' ? countryData : countryData.filter(c => c.region === region))
-        : [countryData.find(c => c.code === countrySelect.value)];
+        document.getElementById('loading').style.display = 'block';
+        currentHolidays = {};
+        const year = yearSelect.value, isAll = countrySelect.value === 'ALL';
+        const region = regionSelect.value;
+        const targets = isAll
+            ? (region === 'All' ? countryData : countryData.filter(c => c.region === region))
+            : [countryData.find(c => c.code === countrySelect.value)];
+        const CALENDARIFIC_KEY = '3R7QE1Rdf42oOEski9IfJ5mt0sfdSMaM';
 
-    const CALENDARIFIC_KEY = '3R7QE1Rdf42oOEski9IfJ5mt0sfdSMaM';
-
-    async function fetchFromNager(country) {
-        const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/${country.code}`);
-        if (!res.ok) return null;
-        const data = await res.json();
-        return Array.isArray(data) && data.length > 0 ? data : null;
+        async function fetchFromNager(country) {
+            const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/${country.code}`);
+            if (!res.ok) return null;
+            const data = await res.json();
+            return Array.isArray(data) && data.length > 0 ? data : null;
+        }
+        async function fetchFromCalendarific(country) {
+            const res = await fetch(`https://calendarific.com/api/v2/holidays?api_key=${CALENDARIFIC_KEY}&country=${country.code}&year=${year}`);
+            if (!res.ok) return null;
+            const data = await res.json();
+            const holidays = data?.response?.holidays;
+            if (!Array.isArray(holidays) || holidays.length === 0) return null;
+            const nonWorkableTypes = ['national', 'public', 'bank', 'school', 'optional', 'observance'];
+            return holidays.filter(h => h.type && h.type.some(t => nonWorkableTypes.includes(t.toLowerCase()))).map(h => ({ date: h.date.iso.slice(0, 10), name: h.name }));
+        }
+        function applyHolidays(holidays, countryCode) {
+            holidays.forEach(h => {
+                const dateKey = h.date.slice(0, 10);
+                if (!currentHolidays[dateKey]) currentHolidays[dateKey] = {};
+                if (!currentHolidays[dateKey][h.name]) currentHolidays[dateKey][h.name] = [];
+                if (!currentHolidays[dateKey][h.name].includes(countryCode)) currentHolidays[dateKey][h.name].push(countryCode);
+            });
+        }
+        try {
+            await Promise.all(targets.map(async (country) => {
+                try {
+                    const nager = await fetchFromNager(country);
+                    if (nager) applyHolidays(nager, country.code);
+                    else { const cal = await fetchFromCalendarific(country); if (cal) applyHolidays(cal, country.code); }
+                } catch(e) {
+                    try { const cal = await fetchFromCalendarific(country); if (cal) applyHolidays(cal, country.code); } catch(e2) {}
+                }
+            }));
+            renderCalendar();
+        } catch (e) { renderCalendar(); }
+        document.getElementById('loading').style.display = 'none';
+        updateNavTitle();
     }
 
-    async function fetchFromCalendarific(country) {
-    const res = await fetch(`https://calendarific.com/api/v2/holidays?api_key=${CALENDARIFIC_KEY}&country=${country.code}&year=${year}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const holidays = data?.response?.holidays;
-    if (!Array.isArray(holidays) || holidays.length === 0) return null;
-    
-    const nonWorkableTypes = ['national', 'public', 'bank', 'school', 'optional', 'observance'];
-    
-    return holidays
-        .filter(h => h.type && h.type.some(t => nonWorkableTypes.includes(t.toLowerCase())))
-        .map(h => ({
-            date: h.date.iso.slice(0, 10),
-            name: h.name
-        }));
-}
-
-    function applyHolidays(holidays, countryCode) {
-    holidays.forEach(h => {
-        const dateKey = h.date.slice(0, 10);
-        if (!currentHolidays[dateKey]) currentHolidays[dateKey] = {};
-        if (!currentHolidays[dateKey][h.name]) currentHolidays[dateKey][h.name] = [];
-        if (!currentHolidays[dateKey][h.name].includes(countryCode)) {
-            currentHolidays[dateKey][h.name].push(countryCode);
-        }
-    });
-}
-
-    try {
-        await Promise.all(targets.map(async (country) => {
-            try {
-                const nager = await fetchFromNager(country);
-                if (nager) {
-                    applyHolidays(nager, country.code);
-                } else {
-                    const cal = await fetchFromCalendarific(country);
-                    if (cal) applyHolidays(cal, country.code);
-                }
-            } catch(e) {
-                try {
-                    const cal = await fetchFromCalendarific(country);
-                    if (cal) applyHolidays(cal, country.code);
-                } catch(e2) {}
-            }
-        }));
-        renderCalendar();
-    } catch (e) { renderCalendar(); }
-
-    document.getElementById('loading').style.display = 'none';
-    updateNavTitle();
-}
-
     function renderCalendar() {
+        closePopup();
         calendarGrid.innerHTML = '';
         const y = parseInt(yearSelect.value), m = parseInt(monthSelect.value);
         const first = new Date(y, m, 1).getDay(), total = new Date(y, m + 1, 0).getDate();
-
         const isAllMode = countrySelect.value === 'ALL';
         let currY, currM, currD, displayDate;
-
         if (isAllMode) {
-            const now = new Date();
-            currY = now.getFullYear(); currM = now.getMonth() + 1; currD = now.getDate();
+            const now = new Date(); currY = now.getFullYear(); currM = now.getMonth() + 1; currD = now.getDate();
             displayDate = now.toLocaleDateString("en-GB", {day:'2-digit', month:'short', year:'numeric'}) + " (Local Time)";
             clockDisplay.style.display = 'none';
         } else {
@@ -584,54 +755,47 @@
             clockDisplay.style.display = 'flex';
             startClocks();
         }
-
         localDateDisplay.textContent = displayDate;
-        const todayKey = `${currY}-${String(currM).padStart(2, '0')}-${String(currD).padStart(2, '0')}`;
-        
-        if (currentHolidays[todayKey]) {
-            const names = Object.keys(currentHolidays[todayKey]);
-            dailyStatus.textContent = names.join(" | ");
-        } else {
-            dailyStatus.textContent = "Nothing";
-        }
-
+        const todayKey = `${currY}-${String(currM).padStart(2,'0')}-${String(currD).padStart(2,'0')}`;
+        dailyStatus.textContent = currentHolidays[todayKey] ? Object.keys(currentHolidays[todayKey]).join(' | ') : 'Nothing';
         updateNavTitle();
 
         for (let i = 0; i < first; i++) calendarGrid.appendChild(Object.assign(document.createElement('div'), {className: 'day-cell empty'}));
-        
         for (let d = 1; d <= total; d++) {
-            const cell = document.createElement('div'); 
+            const cell = document.createElement('div');
             cell.className = 'day-cell';
             if (y === currY && (m + 1) === currM && d === currD) cell.classList.add('today');
             if (selectedDate && y === selectedDate.year && m === selectedDate.month && d === selectedDate.day) cell.classList.add('selected-day');
-
-            const dateKey = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const dateKey = `${y}-${String(m + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
             let html = `<div class="day-number">${d}</div><div class="holiday-list">`;
-            
             if (currentHolidays[dateKey]) {
                 for (const [name, codes] of Object.entries(currentHolidays[dateKey])) {
                     const codeStr = isAllMode ? `<span class="country-tag">(${codes.join(',')})</span>` : '';
-                    html += `<div class="holiday-label">${name}${codeStr}</div>`;
+                    html += `<div class="holiday-label" data-name="${name.replace(/"/g,'&quot;')}" data-date="${dateKey}" data-codes="${codes.join(',')}" title="Click for details">${name}${codeStr}</div>`;
                 }
             }
             html += `</div>`;
             cell.innerHTML = html;
             calendarGrid.appendChild(cell);
         }
+
+        calendarGrid.querySelectorAll('.holiday-label').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const name = el.getAttribute('data-name');
+                const dateKey = el.getAttribute('data-date');
+                const codes = el.getAttribute('data-codes').split(',');
+                showHolidayPopup(el, name, codes, dateKey);
+            });
+        });
     }
 
     function startClocks() {
         if (clockInterval) clearInterval(clockInterval);
         if (countrySelect.value === 'ALL') return;
-
         const country = countryData.find(c => c.code === countrySelect.value);
         const update = () => {
-            clockDisplay.innerHTML = country.zones.map(z => `
-                <div class="clock-item">
-                    <div class="clock-time">${new Date().toLocaleTimeString("en-GB", {timeZone: z.tz, hour:'2-digit', minute:'2-digit', second:'2-digit'})}</div>
-                    <div class="clock-label">${z.label}</div>
-                </div>
-            `).join('');
+            clockDisplay.innerHTML = country.zones.map(z => `<div class="clock-item"><div class="clock-time">${new Date().toLocaleTimeString("en-GB", {timeZone: z.tz, hour:'2-digit', minute:'2-digit', second:'2-digit'})}</div><div class="clock-label">${z.label}</div></div>`).join('');
         };
         update(); clockInterval = setInterval(update, 1000);
     }
@@ -639,20 +803,14 @@
     document.getElementById('todayBtn').onclick = () => {
         selectedDate = null;
         let currY, currM;
-        if (countrySelect.value === 'ALL') {
-            const now = new Date();
-            currY = now.getFullYear(); currM = now.getMonth();
-        } else {
+        if (countrySelect.value === 'ALL') { const now = new Date(); currY = now.getFullYear(); currM = now.getMonth(); }
+        else {
             const country = countryData.find(c => c.code === countrySelect.value);
-            const countryDateStr = new Date().toLocaleDateString("en-CA", {timeZone: country.zones[0].tz});
-            const parts = countryDateStr.split('-').map(Number);
+            const parts = new Date().toLocaleDateString("en-CA", {timeZone: country.zones[0].tz}).split('-').map(Number);
             currY = parts[0]; currM = parts[1] - 1;
         }
-        yearSelect.value = currY;
-        monthSelect.value = currM;
-        yearSelect.dataset.prevYear = currY;
-        saveSelections();
-        fetchHolidays();
+        yearSelect.value = currY; monthSelect.value = currM; yearSelect.dataset.prevYear = currY;
+        saveSelections(); fetchHolidays();
     };
 
     regionSelect.onchange = () => { updateCountryList(); saveSelections(); fetchHolidays(); };
