@@ -390,18 +390,30 @@
     function positionPopup(triggerEl) {
         const rect = triggerEl.getBoundingClientRect();
         const popupW = 280;
-        const margin = 8;
-        let left = rect.left + window.scrollX;
-        let top = rect.bottom + window.scrollY + 6;
+        const margin = 10;
+        const gap = 6;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
 
-        if (left + popupW > window.innerWidth - margin) {
-            left = window.innerWidth - popupW - margin;
-        }
+        popup.style.visibility = 'hidden';
+        popup.style.left = '0px';
+        popup.style.top = '0px';
+        const popupH = popup.offsetHeight || 200;
+        popup.style.visibility = '';
+
+        let left = rect.left;
+        if (left + popupW > vw - margin) left = vw - popupW - margin;
         if (left < margin) left = margin;
 
-        const estimatedH = 160;
-        if (top + estimatedH > window.scrollY + window.innerHeight - margin) {
-            top = rect.top + window.scrollY - estimatedH - 6;
+        const spaceBelow = vh - rect.bottom - gap - margin;
+        const spaceAbove = rect.top - gap - margin;
+        let top;
+        if (spaceBelow >= popupH || spaceBelow >= spaceAbove) {
+            top = rect.bottom + gap;
+            if (top + popupH > vh - margin) top = vh - popupH - margin;
+        } else {
+            top = rect.top - gap - popupH;
+            if (top < margin) top = margin;
         }
 
         popup.style.left = left + 'px';
@@ -567,6 +579,9 @@
         if (data.note) {
             popupFooter.textContent = '📌 ' + data.note;
         }
+
+        // Re-position now that we know the real height
+        if (activeLabel) positionPopup(activeLabel);
     }
 
     function getWorkabilityStyle(w) {
