@@ -358,6 +358,8 @@
     let descriptionCache = {};
     let currentFetchController = null;
 
+    // ─── Popup helpers ───
+
     document.getElementById('popupClose').onclick = closePopup;
 
     document.addEventListener('click', (e) => {
@@ -444,7 +446,7 @@
         popup.classList.add('visible');
         positionPopup(labelEl);
 
-        const cacheKey = `${holidayName}||${countryCodes.sort().join(',')}`;
+        const cacheKey = `${holidayName}||${countryCodes.sort().join(',')}||${dateKey}`;
         if (descriptionCache[cacheKey]) {
             renderPopupContent(descriptionCache[cacheKey]);
             return;
@@ -453,47 +455,86 @@
         if (currentFetchController) currentFetchController.abort();
         currentFetchController = new AbortController();
 
+        // Try each country code until we get a match from Calendarific
+        const CALENDARIFIC_KEY = '3R7QE1Rdf42oOEski9IfJ5mt0sfdSMaM';
+        const [year] = dateKey.split('-');
+
         try {
-            const countryContext = countryNames.length === 1
-                ? `in ${countryNames[0]}`
-                : `in: ${countryNames.join(', ')}`;
+            let found = null;
 
-            const prompt = `You are a concise holiday reference assistant. For the holiday "${holidayName}" observed ${countryContext}, provide a brief info card with these fields in JSON format only (no markdown, no extra text):
-{
-  "description": "2-3 sentence plain text description of what the holiday celebrates or commemorates",
-  "workability": "one of: Full public holiday (non-workable) | Partial / bank holiday | Optional / regional | Observance only (workable)",
-  "scope": "National | Regional | Religious | Cultural",
-  "note": "one short sentence about any important nuance (optional restrictions, regional differences, variable dates, etc.) — keep it under 20 words, or empty string if nothing notable"
-}`;
+            for (const code of countryCodes) {
+                if (currentFetchController.signal.aborted) return;
+                try {
+                    const res = await fetch(
+                        `https://calendarific.com/api/v2/holidays?api_key=${CALENDARIFIC_KEY}&country=${code}&year=${year}`,
+                        { signal: currentFetchController.signal }
+                    );
+                    if (!res.ok) continue;
+                    const data = await res.json();
+                    const holidays = data?.response?.holidays;
+                    if (!Array.isArray(holidays)) continue;
 
-            const response = await fetch('https://api.anthropic.com/v1/messages', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    model: 'claude-sonnet-4-20250514',
-                    max_tokens: 1000,
-                    messages: [{ role: 'user', content: prompt }]
-                }),
-                signal: currentFetchController.signal
-            });
-
-            if (!response.ok) throw new Error('API error');
-            const data = await response.json();
-            const raw = data.content.map(b => b.text || '').join('').trim();
-            let parsed;
-            try {
-                const cleaned = raw.replace(/```json|```/g, '').trim();
-                parsed = JSON.parse(cleaned);
-            } catch {
-                parsed = { description: raw, workability: '', scope: '', note: '' };
+                    // Find the holiday whose name most closely matches
+                    const nameLower = holidayName.toLowerCase();
+                    const match = holidays.find(h =>
+                        h.name.toLowerCase() === nameLower ||
+                        h.name.toLowerCase().includes(nameLower) ||
+                        nameLower.includes(h.name.toLowerCase())
+                    );
+                    if (match) { found = match; break; }
+                } catch (e) {
+                    if (e.name === 'AbortError') return;
+                }
             }
 
-            descriptionCache[cacheKey] = parsed;
-            renderPopupContent(parsed);
+            if (found) {
+                // Build a structured object from Calendarific data
+                const types = Array.isArray(found.type) ? found.type : [];
+                const typeStr = types.length ? types.join(', ') : '';
+
+                // Map Calendarific type tags to workability label
+                const typeLower = typeStr.toLowerCase();
+                let workability = 'Full public holiday (non-workable)';
+                if (typeLower.includes('optional')) workability = 'Optional / regional';
+                else if (typeLower.includes('observance')) workability = 'Observance only (workable)';
+                else if (typeLower.includes('bank')) workability = 'Partial / bank holiday';
+                else if (typeLower.includes('school')) workability = 'Partial / bank holiday';
+
+                // Derive scope from type tags
+                let scope = 'National';
+                if (typeLower.includes('religious') || typeLower.includes('christian') || typeLower.includes('muslim') || typeLower.includes('hindu') || typeLower.includes('jewish') || typeLower.includes('buddhist')) scope = 'Religious';
+                else if (typeLower.includes('cultural') || typeLower.includes('season')) scope = 'Cultural';
+                else if (typeLower.includes('local') || typeLower.includes('state') || typeLower.includes('region')) scope = 'Regional';
+
+                const description = found.description || `${found.name} is observed in ${countryNames.join(', ')}.`;
+
+                // Extra note: states/locations if available
+                let note = '';
+                if (found.states && found.states !== 'All') {
+                    note = `Observed only in: ${found.states}.`;
+                } else if (typeStr) {
+                    note = `Type: ${typeStr}.`;
+                }
+
+                const parsed = { description, workability, scope, note };
+                descriptionCache[cacheKey] = parsed;
+                renderPopupContent(parsed);
+
+            } else {
+                // Calendarific had no match — show what we know from the calendar data
+                const parsed = {
+                    description: `${holidayName} is a public holiday observed in ${countryNames.join(', ')}.`,
+                    workability: 'Full public holiday (non-workable)',
+                    scope: 'National',
+                    note: 'Detailed description not available from the data source for this entry.'
+                };
+                descriptionCache[cacheKey] = parsed;
+                renderPopupContent(parsed);
+            }
 
         } catch (err) {
             if (err.name === 'AbortError') return;
-            popupBody.innerHTML = '<span class="popup-error">Could not load holiday info. Please try again.</span>';
+            popupBody.innerHTML = '<span class="popup-error">Could not reach the holiday data source. Please check your connection and try again.</span>';
         }
     }
 
