@@ -10,6 +10,8 @@
 *{box-sizing:border-box}body{font-family:"Segoe UI",system-ui,sans-serif;margin:0;padding:10px;background:var(--bg);color:var(--text);font-size:13px}.container{max-width:1300px;margin:auto;background:var(--card);padding:12px;border-radius:8px;box-shadow:0 4px 15px rgba(0,0,0,.1)}
 .status-bar{background:var(--primary);color:#fff;padding:8px 15px;border-radius:6px;margin-bottom:10px;display:flex;justify-content:space-between}.status-info{display:flex;flex-direction:column}.status-label{font-size:9px;text-transform:uppercase;opacity:.8;letter-spacing:.5px}.status-value{font-size:14px;font-weight:700}
 .header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;gap:8px;flex-wrap:wrap}.controls{display:flex;gap:5px;flex-wrap:wrap;align-items:center;flex:1}select,button{padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:var(--card);color:var(--text);cursor:pointer;font-size:12px}#todayBtn{background:var(--primary);color:#fff;border:0;font-weight:700}
+#deepSearchBtn{border-color:var(--primary);color:var(--primary);font-weight:700}#deepSearchBtn:hover:not(:disabled){background:var(--primary);color:#fff}#deepSearchBtn:disabled{opacity:.55;cursor:default}
+.fetch-note{text-align:center;font-size:11px;color:var(--muted);margin:-2px 0 8px;min-height:14px}.fetch-note.warn{color:#b3261e}[data-theme="dark"] .fetch-note.warn{color:#ffb4ab}
 .clock-display{display:flex;gap:6px}.clock-item{text-align:center;background:var(--light);padding:4px 10px;border-radius:4px;border:1px solid var(--border);min-width:80px}.clock-time{font-size:13px;font-weight:700;color:var(--primary);font-family:monospace}.clock-label{font-size:8px;text-transform:uppercase;color:var(--muted)}
 .month-nav{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:8px}.nav-arrow{background:var(--light);border:1px solid var(--border);font-size:18px;width:32px;height:32px;border-radius:50%;padding:0}.nav-arrow:hover{background:var(--primary);color:#fff}.nav-title{font-size:16px;font-weight:700;min-width:180px;text-align:center}
 .calendar-header{display:grid;grid-template-columns:repeat(7,1fr);background:var(--border);border:1px solid var(--border);border-bottom:0;border-radius:6px 6px 0 0}.calendar-header>div{background:var(--light);padding:5px;text-align:center;font-weight:700;font-size:11px;color:var(--muted)}.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:0 0 6px 6px}.day-cell{background:var(--card);min-height:82px;height:82px;padding:4px;display:flex;flex-direction:column;overflow-y:auto;position:relative}.day-cell.empty{background:var(--empty)}.day-cell.today{background:var(--today)!important;outline:2px solid var(--today-border);outline-offset:-2px;z-index:2}.day-cell.selected{outline:2px solid var(--primary);outline-offset:-2px;z-index:2}.day-number{font-weight:700;font-size:13px;margin-bottom:2px}.holiday-list{display:flex;flex-direction:column;gap:2px}.holiday-label{background:var(--holiday);color:var(--holiday-text);padding:2px 4px;border-radius:3px;font-size:8.5px;border-left:2px solid var(--primary);line-height:1.15;word-break:break-word;cursor:pointer}.holiday-label:hover{filter:brightness(.94)}.country-tag{font-weight:700;color:var(--primary);font-size:7.5px;margin-left:3px}.source-dot{display:inline-block;width:5px;height:5px;border-radius:50%;margin-left:3px;vertical-align:middle}.source-dot.both{background:#188038}.source-dot.single{background:#f29900}.loading{text-align:center;padding:20px;font-style:italic;color:var(--primary);display:none}.legend{display:flex;gap:12px;justify-content:flex-end;margin-top:6px;color:var(--muted);font-size:9px}.legend span{display:flex;align-items:center;gap:4px}
@@ -27,10 +29,11 @@
 <div class="container">
   <div class="status-bar"><div class="status-info"><span class="status-label">Today's Status</span><span class="status-value" id="dailyStatus">---</span></div><div class="status-info" style="text-align:right"><span class="status-label">Date Context</span><span class="status-value" id="localDateDisplay">--/--/----</span></div></div>
   <div class="header">
-    <div class="controls"><button id="darkModeToggle">🌙</button><button id="todayBtn">Today</button><select id="regionSelect"><option value="All">All Continents</option><option>Africa</option><option>Americas</option><option>Asia</option><option>Europe</option><option>Oceania</option></select><select id="countrySelect"></select><select id="yearSelect"></select><select id="monthSelect"></select><div class="datepicker-trigger" id="datepickerTrigger"><button id="datepickerBtn">📅 Go to date</button><div class="datepicker-panel" id="datepickerPanel"></div></div></div>
+    <div class="controls"><button id="darkModeToggle">🌙</button><button id="todayBtn">Today</button><select id="regionSelect"><option value="All">All Continents</option><option>Africa</option><option>Americas</option><option>Asia</option><option>Europe</option><option>Oceania</option></select><select id="countrySelect"></select><select id="yearSelect"></select><select id="monthSelect"></select><div class="datepicker-trigger" id="datepickerTrigger"><button id="datepickerBtn">📅 Go to date</button><div class="datepicker-panel" id="datepickerPanel"></div></div><button id="deepSearchBtn" title="Check every country in this view against both holiday sources">🔍 Deeper search</button></div>
     <div class="clock-display" id="clockDisplay"></div>
   </div>
   <div class="month-nav"><button class="nav-arrow" id="prevMonth">&#8249;</button><span class="nav-title" id="navTitle"></span><button class="nav-arrow" id="nextMonth">&#8250;</button></div>
+  <div class="fetch-note" id="fetchNote" aria-live="polite"></div>
   <div id="loading" class="loading">📡 Gathering and comparing holiday data...</div>
   <div class="calendar-header"><div>SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div></div><div class="calendar-grid" id="calendarGrid"></div>
   <div class="legend"><span><i class="source-dot both"></i>Both sources</span><span><i class="source-dot single"></i>One source</span></div>
@@ -38,6 +41,8 @@
 <script>
 /* Paste your existing Calendarific key here. Keep it private if you share this file. */
 const CALENDARIFIC_KEY='3R7QE1Rdf42oOEski9IfJ5mt0sfdSMaM';
+/* Ask for confirmation before a deeper search that would use more than this many Calendarific calls */
+const DEEP_CONFIRM_THRESHOLD=25;
 
 const countryData=[
 ['AR','Argentina','Americas','BA','America/Argentina/Buenos_Aires'],['BO','Bolivia','Americas','LP','America/La_Paz'],['BR','Brazil','Americas','BSB','America/Sao_Paulo'],['CA','Canada','Americas','TOR','America/Toronto'],['CL','Chile','Americas','SCL','America/Santiago'],['CO','Colombia','Americas','BOG','America/Bogota'],['CR','Costa Rica','Americas','SJO','America/Costa_Rica'],['CU','Cuba','Americas','HAV','America/Havana'],['DO','Dominican Republic','Americas','SDQ','America/Santo_Domingo'],['EC','Ecuador','Americas','UIO','America/Guayaquil'],['GT','Guatemala','Americas','GUA','America/Guatemala'],['JM','Jamaica','Americas','KIN','America/Jamaica'],['MX','Mexico','Americas','MEX','America/Mexico_City'],['PA','Panama','Americas','PTY','America/Panama'],['PY','Paraguay','Americas','ASU','America/Asuncion'],['PE','Peru','Americas','LIM','America/Lima'],['US','United States','Americas','NYC','America/New_York'],['UY','Uruguay','Americas','MVD','America/Montevideo'],['VE','Venezuela','Americas','CCS','America/Caracas'],
@@ -49,9 +54,10 @@ const countryData=[
 const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const monthsShort=months.map(m=>m.slice(0,3));
 const $=id=>document.getElementById(id);
-const regionSelect=$('regionSelect'),countrySelect=$('countrySelect'),yearSelect=$('yearSelect'),monthSelect=$('monthSelect'),calendarGrid=$('calendarGrid'),clockDisplay=$('clockDisplay'),dailyStatus=$('dailyStatus'),localDateDisplay=$('localDateDisplay'),navTitle=$('navTitle'),popup=$('holidayPopup'),popupTitle=$('popupTitle'),popupMeta=$('popupMeta'),popupBody=$('popupBody'),popupFooter=$('popupFooter');
-let currentHolidays={},holidayDetails={},clockInterval,selectedDate=null,activeLabel=null,fetchRun=0;
+const regionSelect=$('regionSelect'),countrySelect=$('countrySelect'),yearSelect=$('yearSelect'),monthSelect=$('monthSelect'),calendarGrid=$('calendarGrid'),clockDisplay=$('clockDisplay'),dailyStatus=$('dailyStatus'),localDateDisplay=$('localDateDisplay'),navTitle=$('navTitle'),popup=$('holidayPopup'),popupTitle=$('popupTitle'),popupMeta=$('popupMeta'),popupBody=$('popupBody'),popupFooter=$('popupFooter'),deepSearchBtn=$('deepSearchBtn'),fetchNote=$('fetchNote');
+let currentHolidays={},holidayDetails={},clockInterval,selectedDate=null,activeLabel=null,fetchRun=0,fetching=false;
 const STORAGE_KEY='holiday-calendar-selections',CACHE_PREFIX='holiday-cache-v3',CACHE_TTL=7*86400000;
+const hasCalendarificKey=()=>Boolean(CALENDARIFIC_KEY)&&!CALENDARIFIC_KEY.includes('PASTE_');
 
 function cacheKey(provider,country,year){return `${CACHE_PREFIX}:${provider}:${country}:${year}`}
 function cacheRead(provider,country,year,allowStale=false){try{const value=JSON.parse(localStorage.getItem(cacheKey(provider,country,year)));return value&&Array.isArray(value.data)&&(allowStale||Date.now()-value.saved<CACHE_TTL)?value.data:null}catch{return null}}
@@ -70,8 +76,23 @@ function normalizeCalendarific(h){
   const states=h.states&&h.states!=='All'?[String(h.states)]:[];
   return{date:String(h?.date?.iso||'').slice(0,10),name:String(h?.name||'').trim(),description:String(h?.description||''),types:Array.isArray(h.type)?h.type:[],states,scope:states.length?'Regional':'National',source:'Calendarific'};
 }
-async function getNager(country,year){const cached=cacheRead('nager',country,year);if(cached)return cached;try{const raw=await fetchJson(`https://date.nager.at/api/v3/PublicHolidays/${year}/${country}`),data=Array.isArray(raw)?raw.map(normalizeNager).filter(x=>x.date&&x.name):[];cacheWrite('nager',country,year,data);return data}catch{return cacheRead('nager',country,year,true)||[]}}
-async function getCalendarific(country,year,allowNetwork=true){const cached=cacheRead('calendarific',country,year);if(cached)return cached;if(!allowNetwork||!CALENDARIFIC_KEY||CALENDARIFIC_KEY.includes('PASTE_'))return[];try{const raw=await fetchJson(`https://calendarific.com/api/v2/holidays?api_key=${encodeURIComponent(CALENDARIFIC_KEY)}&country=${country}&year=${year}`),rows=raw?.response?.holidays,data=Array.isArray(rows)?rows.map(normalizeCalendarific).filter(x=>x.date&&x.name):[];cacheWrite('calendarific',country,year,data);return data}catch{return cacheRead('calendarific',country,year,true)||[]}}
+
+/* Both getters return {data, failed}. "failed" means the network call errored (not just an empty result). */
+async function getNager(country,year){
+  const cached=cacheRead('nager',country,year);if(cached)return{data:cached,failed:false};
+  try{const raw=await fetchJson(`https://date.nager.at/api/v3/PublicHolidays/${year}/${country}`),data=Array.isArray(raw)?raw.map(normalizeNager).filter(x=>x.date&&x.name):[];cacheWrite('nager',country,year,data);return{data,failed:false}}
+  catch{return{data:cacheRead('nager',country,year,true)||[],failed:true}}
+}
+async function getCalendarific(country,year,allowNetwork=true){
+  const cached=cacheRead('calendarific',country,year);if(cached)return{data:cached,failed:false};
+  if(!allowNetwork||!hasCalendarificKey())return{data:[],failed:false};
+  try{
+    const raw=await fetchJson(`https://calendarific.com/api/v2/holidays?api_key=${encodeURIComponent(CALENDARIFIC_KEY)}&country=${country}&year=${year}`),rows=raw?.response?.holidays;
+    /* Calendarific can report errors (quota, bad key) inside an HTTP 200. Never cache those. */
+    if(raw?.meta?.code!==200||!Array.isArray(rows))throw new Error(`Calendarific error ${raw?.meta?.code??'unknown'}`);
+    const data=rows.map(normalizeCalendarific).filter(x=>x.date&&x.name);cacheWrite('calendarific',country,year,data);return{data,failed:false};
+  }catch{return{data:cacheRead('calendarific',country,year,true)||[],failed:true}}
+}
 
 function mergeLists(...lists){
   const byDate=new Map();
@@ -98,13 +119,58 @@ function applyHoliday(holiday,country){
   details.sources=[...new Set([...details.sources,...holiday.sources])];details.types=[...new Set([...details.types,...holiday.types])];details.states=[...new Set([...details.states,...holiday.states])];details.scopes=[...new Set([...details.scopes,...holiday.scopes])];if(!details.description&&holiday.description)details.description=holiday.description;
 }
 async function withConcurrency(items,limit,worker){let index=0;await Promise.all(Array.from({length:Math.min(limit,items.length)},async()=>{while(index<items.length){const item=items[index++];await worker(item)}}))}
-async function fetchHolidays(){
-  const run=++fetchRun;$('loading').style.display='block';currentHolidays={};holidayDetails={};
-  const year=yearSelect.value,isAll=countrySelect.value==='ALL',region=regionSelect.value;
-  const targets=isAll?(region==='All'?countryData:countryData.filter(c=>c.region===region)):[countryData.find(c=>c.code===countrySelect.value)].filter(Boolean);
-  await withConcurrency(targets,6,async country=>{const [nager,calendarific]=await Promise.all([getNager(country.code,year),getCalendarific(country.code,year,!isAll)]);if(run!==fetchRun)return;mergeLists(nager,calendarific).forEach(h=>applyHoliday(h,country.code))});
-  if(run===fetchRun){renderCalendar();$('loading').style.display='none';updateNavTitle()}
+
+function getTargets(){
+  if(countrySelect.value!=='ALL')return[countryData.find(c=>c.code===countrySelect.value)].filter(Boolean);
+  return regionSelect.value==='All'?countryData:countryData.filter(c=>c.region===regionSelect.value);
 }
+
+/*
+  Normal load (All mode): Nager for everyone; Calendarific only for countries where Nager came back empty.
+  Single country or deep search: both sources for every target.
+*/
+async function fetchHolidays(deep=false){
+  const run=++fetchRun;fetching=true;updateDeepButton();
+  const loading=$('loading');loading.textContent=deep?'🔍 Running deeper search across both sources...':'📡 Gathering and comparing holiday data...';loading.style.display='block';
+  currentHolidays={};holidayDetails={};
+  const year=yearSelect.value,isAll=countrySelect.value==='ALL',targets=getTargets(),bothUpfront=!isAll||deep;
+  const report={empty:[],gapFilled:[],errors:[]};
+  await withConcurrency(targets,deep?3:6,async country=>{
+    const [nager,early]=await Promise.all([getNager(country.code,year),bothUpfront?getCalendarific(country.code,year,true):null]);
+    const calendarific=early||await getCalendarific(country.code,year,nager.data.length===0);
+    if(run!==fetchRun)return;
+    if(isAll&&!deep&&!nager.data.length&&calendarific.data.length)report.gapFilled.push(country.code);
+    if(!nager.data.length&&!calendarific.data.length)(nager.failed||calendarific.failed?report.errors:report.empty).push(country.code);
+    mergeLists(nager.data,calendarific.data).forEach(h=>applyHoliday(h,country.code));
+  });
+  if(run===fetchRun){fetching=false;renderCalendar();loading.style.display='none';updateNavTitle();updateFetchNote(report,{deep,isAll,count:targets.length});updateDeepButton()}
+}
+
+function updateFetchNote({empty,gapFilled,errors},{deep,isAll,count}){
+  const messages=[];let warn=false;
+  if(errors.length){warn=true;messages.push(`⚠️ Couldn't load ${errors.join(', ')} (network or API error). ${deep||!isAll?'Try again in a bit.':'Try Deeper search.'}`)}
+  if(empty.length){warn=true;messages.push(`No holidays found for ${empty.join(', ')} in either source.`)}
+  if(!messages.length&&deep)messages.push(`✅ Deeper search done: ${count} ${count===1?'country':'countries'} checked against both sources.`);
+  if(gapFilled.length)messages.push(`ℹ️ Filled gaps from Calendarific for ${gapFilled.join(', ')}.`);
+  fetchNote.textContent=messages.join(' ');fetchNote.classList.toggle('warn',warn);
+}
+
+/* Only shown in All-countries mode — single-country view already queries both sources. */
+function uncachedCalendarificCount(){const year=yearSelect.value;return getTargets().filter(c=>!cacheRead('calendarific',c.code,year)).length}
+function updateDeepButton(){
+  const isAll=countrySelect.value==='ALL';deepSearchBtn.style.display=isAll?'':'none';if(!isAll)return;
+  if(!hasCalendarificKey()){deepSearchBtn.disabled=true;deepSearchBtn.textContent='🔍 Deeper search';deepSearchBtn.title='Add a Calendarific API key to enable deeper search';return}
+  if(fetching){deepSearchBtn.disabled=true;deepSearchBtn.textContent='🔍 Searching...';return}
+  const pending=uncachedCalendarificCount();
+  deepSearchBtn.disabled=pending===0;
+  deepSearchBtn.textContent=pending===0?'✅ Fully checked':`🔍 Deeper search (${pending} API ${pending===1?'call':'calls'})`;
+  deepSearchBtn.title=pending===0?'Every country in this view has already been checked against both sources':'Check every country in this view against both holiday sources';
+}
+deepSearchBtn.onclick=()=>{
+  const pending=uncachedCalendarificCount();
+  if(pending>DEEP_CONFIRM_THRESHOLD&&!confirm(`Deeper search will use about ${pending} Calendarific API calls. Results are cached for 7 days. Continue?`))return;
+  fetchHolidays(true);
+};
 
 function holidayCategory(types){const t=types.join(' ').toLowerCase();if(t.includes('observance'))return'Observance';if(t.includes('optional'))return'Optional holiday';if(t.includes('bank'))return'Bank holiday';if(t.includes('school'))return'School holiday';if(t.includes('authorities'))return'Government / authorities holiday';if(t.includes('public')||t.includes('national'))return'Public holiday';return types[0]||'Holiday'}
 function holidayWorkability(types){const t=types.join(' ').toLowerCase();if(/public|national|bank|authorities/.test(t))return{label:'Non-workable',className:'nonwork',detail:'Normally treated as a non-working holiday.'};if(/observance|optional/.test(t))return{label:'Workable',className:'work',detail:'Normally does not imply a general workplace closure.'};if(/school/.test(t))return{label:'Varies',className:'varies',detail:'May affect schools without closing workplaces generally.'};return{label:'Not specified',className:'varies',detail:'The connected sources do not clearly specify workability.'}}
